@@ -1,0 +1,73 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the range field module.
+ */
+
+/**
+ * Implements hook_field_schema().
+ */
+function range_field_schema($field) {
+  switch ($field['type']) {
+    case 'range_integer':
+      $column = array(
+        'type' => 'int',
+        'not null' => FALSE,
+      );
+      break;
+
+    case 'range_float':
+      $column = array(
+        'type' => 'float',
+        'not null' => FALSE,
+      );
+      break;
+
+    case 'range_decimal':
+      $column = array(
+        'type' => 'numeric',
+        'precision' => $field['settings']['precision'],
+        'scale' => $field['settings']['scale'],
+        'not null' => FALSE,
+      );
+      break;
+  }
+  $columns = array(
+    'from' => $column,
+    'to' => $column,
+  );
+  return array(
+    'columns' => $columns,
+  );
+}
+
+/**
+ * Converts existing field instances settings to support separate prefix and
+ * suffix for the FROM and TO values.
+ */
+function range_update_7001() {
+  $instances = field_info_instances();
+  foreach ($instances as $entity_type) {
+    foreach ($entity_type as $bundle) {
+      foreach ($bundle as $instance) {
+        if ($instance['widget']['type'] == 'range') {
+          if (!empty($instance['settings']['prefix'])) {
+            $instance['settings']['from']['prefix'] = $instance['settings']['prefix'];
+          }
+          if (!empty($instance['settings']['suffix'])) {
+            $instance['settings']['to']['suffix'] = $instance['settings']['suffix'];
+          }
+          unset($instance['settings']['prefix'], $instance['settings']['suffix']);
+
+          foreach (element_children($instance['display']) as $view_mode) {
+            $e = &$instance['display'][$view_mode]['settings'];
+            $e['from_prefix_suffix'] = $e['to_prefix_suffix'] = $e['prefix_suffix'];
+            unset($e['prefix_suffix']);
+          }
+          field_update_instance($instance);
+        }
+      }
+    }
+  }
+}
