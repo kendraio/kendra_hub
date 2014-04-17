@@ -1,0 +1,84 @@
+<?php
+
+/**
+ * @file
+ * Provide Entity related functionality for Kendra Hub.
+ */
+
+function kendra_e_get_contribution_display($contribution) {
+  $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
+
+  // Get information from the contribution role.
+  // $role = $contribution_wrapper->field_cont_t_role->value();
+  $embedded = $contribution_wrapper->field_cont_t_role->field_embedded->value();
+  $right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+  $contribution_role_name = $contribution_wrapper->field_cont_t_role->name->value();
+
+  // If the Contribution has a role that has Embedded set to FALSE.
+  if (!$embedded) {
+    // Return the Work name and the role
+    $contributor_name = $contribution_wrapper->field_cont_contributor->title->value();
+    return $contributor_name . ' - ' .$contribution_role_name;
+
+  }
+
+  // If the Contribution has a role that has Embedded set to TRUE.
+  else {
+    // If Contributor is Legal entity.
+    if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
+      // Should not happen - but if it does we will return the contribution tile.
+      return $contribution_wrapper->field_cont_contributor->title->value();
+    }
+    // Asset.
+    else if ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
+      // Get the contributions of the contributer asset of the right type we are
+      // intrested in.
+      $contributions = kendra_e_get_asset_contributions($contribution_wrapper->field_cont_contributor, $right_type_id);
+      // Cycle contribution related to the contributer (field_cont_contributor).
+      $s = '';
+      foreach ($contributions as $value) {
+        $s .= kendra_e_get_contribution_display($value). '&nbsp;';
+      }
+      return $s;
+    }
+    // We curently suport only legal entity and asset.
+    else {
+      return 'Unknow asset';
+    }
+  }
+}
+
+
+
+function kendra_e_get_asset_contributions($asset, $right_type_id = null ) {
+  $contributions = array();
+  $aid = $asset->nid->value();
+  // @todo build the rights into the query.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'contribution')
+    ->propertyCondition('status', 1)
+    ->fieldCondition('field_cont_work', 'target_id', $aid, '=');
+  $result = $query->execute();
+
+  // Just in case query comes back empty.
+  if (empty($result)) {
+    return array();
+  }
+
+  // extract the contributions.
+  $nodes = entity_load('node', array_keys($result['node']));
+  foreach ($nodes as $contribution) {
+    if (!isset($right_type_id)) {
+      $contributions[] = $contribution;
+    }
+    else {
+      $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
+      $c_right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+      if ($c_right_type_id == $right_type_id) {
+        $contributions[] = $contribution;
+      }
+    }
+  }
+  return $contributions;
+}

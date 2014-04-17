@@ -1,0 +1,4 @@
+name = Kendra Hub Entity API
+description = Provide Entity related functionality for Kendra Hub.
+package = Kendra
+core = 7.x
