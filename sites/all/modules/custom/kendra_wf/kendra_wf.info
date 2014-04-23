@@ -1,0 +1,4 @@
+name = Kendra Hub Workflow
+description = Provide workflow functionality for Kendra Hub.
+package = Kendra
+core = 7.x

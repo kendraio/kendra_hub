@@ -1,0 +1,130 @@
+<?php
+
+/**
+ * @file
+ * Provide workflow functionality for Kendra Hub.
+ */
+
+/**
+ * Called from a views PHP field
+ */
+function kendra_wf_calc_points_value($nid, &$static) {
+  //drupal_set_message($nid);
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+
+  // Get the total usage (target usage).
+  $target_usage = $node_wrapper->field_cont_target_usage->value();
+  $total_usage = _kendra_wf_calc_usage_value($target_usage);
+  // Usage weight.
+  $usage_weight = $node_wrapper->field_cont_usage_weight->value();
+  // right type
+  $right_type = $node_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+
+  // Calcolate the points.
+  $points = $usage_weight * $total_usage;
+
+  // Update the static points.
+  if (empty($static[$right_type])) {
+    $static[$right_type] = $points;
+  }
+  else {
+    $static[$right_type] = $static[$right_type] + $points;
+  }
+
+  return $points;
+}
+
+
+/**
+ * Called from a views PHP field
+ */
+function kendra_wf_calc_points_split($nid, $points, $static) {
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  // right type
+  $right_type = $node_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+
+  $split = $points / $static[$right_type] * 100;
+
+  return $split;
+}
+
+
+function _kendra_wf_calc_usage_value($usage) {
+  $total_usage = 0;
+  foreach ($usage as $value) {
+    $total_usage += abs($value['to'] - $value['from']);
+
+  }
+  return $total_usage;
+}
+
+/**
+ * Implements hook_rules_action_info().
+ */
+
+function kendra_wf_rules_action_info() {
+
+  $actions = array();
+
+  $actions['kendra_wf_load_parent_asset_from_session'] = array(
+    'label' => t('Load parent_asset from session'),
+    'group' => t('Kendra'),
+    'provides' => array(
+      'entity_loaded' => array(
+        'type' => 'node',
+        'label' => t('Loaded entity'),
+        'save' => TRUE,
+      )),
+  );
+
+  $actions['kendra_wf_load_embedded_asset_from_session'] = array(
+    'label' => t('Load embedded_asset from session'),
+    'group' => t('Kendra'),
+    'provides' => array(
+      'entity_loaded' => array(
+        'type' => 'node',
+        'label' => t('Loaded entity'),
+        'save' => TRUE,
+      )),
+  );
+
+  $actions['kendra_wf_load_embedded_contribution_from_session'] = array(
+    'label' => t('Load embedded_contribution from session'),
+    'group' => t('Kendra'),
+    'provides' => array(
+      'entity_loaded' => array(
+        'type' => 'node',
+        'label' => t('Loaded entity'),
+        'save' => TRUE,
+      )),
+  );
+
+  return $actions;
+
+}
+
+function kendra_wf_load_parent_asset_from_session() {
+  // Get from session.
+  $nid = $_SESSION['parent_asset'];
+  $node = node_load($nid);
+  $wrapper = entity_metadata_wrapper('node', $node);
+  return array('entity_loaded' => $wrapper);
+}
+
+function kendra_wf_load_embedded_asset_from_session() {
+  // Get from session.
+  $nid = $_SESSION['embedded_asset'];
+  $node = node_load($nid);
+  $wrapper = entity_metadata_wrapper('node', $node);
+  return array('entity_loaded' => $wrapper);
+}
+
+function kendra_wf_load_embedded_contribution_from_session() {
+  // Get from session.
+  $nid = $_SESSION['embedded_contribution'];
+  $node = node_load($nid);
+  $wrapper = entity_metadata_wrapper('node', $node);
+  return array('entity_loaded' => $wrapper);
+}
