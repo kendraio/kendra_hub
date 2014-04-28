@@ -63,7 +63,6 @@ function _kendra_wf_calc_usage_value($usage) {
 /**
  * Implements hook_rules_action_info().
  */
-
 function kendra_wf_rules_action_info() {
 
   $actions = array();
@@ -127,4 +126,159 @@ function kendra_wf_load_embedded_contribution_from_session() {
   $node = node_load($nid);
   $wrapper = entity_metadata_wrapper('node', $node);
   return array('entity_loaded' => $wrapper);
+}
+
+
+/**
+ * Implements hook_FORMID_alter().
+ *
+ * Form alter to add a smaple submit button.
+ */
+function kendra_wf_form_views_exposed_form_alter(&$form, &$form_state) {
+
+  if (($form_state['view']->name == 'asset_contributions') && ($form_state['view']->current_display == 'sample_asset') ) {
+
+    // Make sure we have a target sample selected
+    if (!isset($_SESSION['sample_target_nid'])) {
+      drupal_set_message('You have no target sample selected');
+      return;
+    }
+
+    $form['sample'] = array(
+       '#type' => 'submit',
+       '#value' => t('Sample'),
+       '#submit' => array('kendra_wf_sample_asset_form_submit'),
+     );
+  }
+  return;
+}
+
+
+
+function kendra_wf_sample_asset_form_submit($form, &$form_state) {
+  if (!isset($_SESSION['sample_target_nid'])) {
+    drupal_set_message('You have no target sample selected');
+    return;
+  }
+  //drupal_set_message(' $form_state = ' . print_r($form_state, TRUE));
+  $used_end = $form_state['values']['field_cont_target_usage_from'];
+  $used_start = $form_state['values']['field_cont_target_usage_to'];
+  $source_nid = arg(1);
+  $target_nid = $_SESSION['sample_target_nid'];
+  unset($_SESSION['sample_target_nid']);
+
+  $source_node = node_load($source_nid);
+  $target_node = node_load($target_nid);
+
+  //$form_state['values']
+  // Get the list of rights used by the sampled asset.
+  $rt_list = kendra_e_get_asset_right_types($source_nid);
+  // Cycle the rights.
+  foreach ($rt_list as $value) {
+    $tid =  kendra_e_get_right_type_role($value['tid'], 'Sample');
+    if (!empty($tid)) {
+      $role = taxonomy_term_load($tid);
+      rules_invoke_component('rules_create_an_embaded_sample_contribution', $source_node, $target_node, $role, $used_start, $used_end);
+      //drupal_set_message('$tid= ' . $tid);
+    }
+  }
+  // @todo - send user to the first contribution edit and after he saves -
+  // Copy the usage to all the other contributions.
+
+  // Temporery until above is completed - go to target asset.
+  drupal_goto('node/' . $target_nid);
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function kendra_wf_block_info() {
+  $blocks = array();
+  $blocks['aggregated_rights_table'] = array(
+    'info' => t('Aggregated Rights Table'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function kendra_wf_block_view($delta) {
+  $block = array();
+
+  switch ($delta) {
+    case 'aggregated_rights_table':
+      $block['content'] = kendra_wf_get_current_aggregated_rights_table();
+      break;
+  }
+  return $block;
+}
+
+
+function kendra_wf_get_current_aggregated_rights_table() {
+  $content = '';
+  $nid = arg(1);
+  $asset = node_load($nid);
+  if ($asset->type == 'asset') {
+    $resolved_asset = kendra_e_resolve_asset($asset);
+
+    $content .= '<h2>Aggregated Rights Report</h2>';
+
+    $content .= '<h3>Split</h3>';
+    $content .= '<table class="views-table cols-2">';
+    $content .= '  <thead>';
+    $content .= '    <tr>';
+    $content .= '       <th>Right Type</th>';
+    $content .= '       <th>Split</th>';
+    $content .= '    </tr> ';
+    $content .= '  </thead>';
+
+    $content .= '  <tbody>';
+    $content .= '    <tr>';
+    $content .= '       <td>Composition</td>';
+    $content .= '       <td>40%</td>';
+    $content .= '    </tr>    ';
+    $content .= '    <tr>';
+    $content .= '       <td>Performance</td>';
+    $content .= '       <td>60%</td>';
+    $content .= '    </tr>    ';
+    $content .= '  </tbody>';
+    $content .= '</table>';
+
+
+
+    $content .= '<h3>Legal Entities</h3>';
+    // Print table headings.
+    $content .= '<table class="aggregated-rights-table cols-3">';
+    $content .= '  <thead>';
+
+    $content .= '    <tr>';
+    $content .= '       <th>Legal Entity</th>';
+    $content .= '       <th>Contributions</th>';
+    $content .= '       <th>Percent</th>';
+    $content .= '    </tr>    ';
+    $content .= '  </thead>';
+    $content .= '  <tbody>';
+
+    //return print_r($resolved_asset, TRUE);
+    //drupal_set_message(print_r($resolved_asset, TRUE));
+    foreach ($resolved_asset['legal_entity'] as $key => $legal_entity) {
+      $content .= '      <tr class="odd views-row-first">';
+      $content .= '              <td class="">' . $key . '</td>';
+      $roles = '';
+      foreach ($legal_entity['roles'] as $role => $value) {
+        $roles .= $role . ' , ';
+      }
+      $roles = substr($roles, 0, -2);
+      $content .= '              <td class="">' . $roles . '</td>';
+      $content .= '              <td class=""> X %</td>';
+      $content .= '     </tr>';
+    }
+
+
+    $content .= '  </tbody>';
+    $content .= '</table>';
+  }
+  return $content;
 }

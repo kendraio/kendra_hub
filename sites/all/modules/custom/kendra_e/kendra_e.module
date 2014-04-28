@@ -5,6 +5,10 @@
  * Provide Entity related functionality for Kendra Hub.
  */
 
+/**
+ * Get the display of a contribution and recursively traverse it if its an
+ * embedded contribution.
+ */
 function kendra_e_get_contribution_display($contribution) {
   $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
 
@@ -48,8 +52,70 @@ function kendra_e_get_contribution_display($contribution) {
   }
 }
 
+function kendra_e_resolve_asset($asset) {
+  // The array to hold the resolved asset data.
+  $resolved_asset = &drupal_static('kendra_hub_resolved_asset');
+  if (!isset($resolved_asset)) {
+      $resolved_asset = array();
+  }
 
 
+  $asset_wrapper = entity_metadata_wrapper('node', $asset);
+  $contributions = kendra_e_get_asset_contributions($asset_wrapper);
+    // Cycle contributions
+    foreach ($contributions as $contribution) {
+      // Get information from the contribution.
+      // $role = $contribution_wrapper->field_cont_t_role->value();
+      $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
+//      $embedded = $contribution_wrapper->field_cont_t_role->field_embedded->value();
+//      $right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+//      $contribution_role_name = $contribution_wrapper->field_cont_t_role->name->value();
+
+      // If contribution is a legal entity
+      if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
+        // Get the legal entity name
+        $contributor_name = $contribution_wrapper->field_cont_contributor->title->value();
+        // Add to the contributers list if not allready in.
+        if (!isset($resolved_asset['legal_entity'][$contributor_name])) {
+          $resolved_asset['legal_entity'][$contributor_name] = array();
+        }
+
+        // Get the contribution type (right - role)
+        $role_name  = $contribution_wrapper->field_cont_t_role->name->value();
+        $right_name = $contribution_wrapper->field_cont_t_role->field_t_right_type->name->value();
+        $contribution_name = $right_name . ' - ' . $role_name;
+        // Add to the contribution type list if not allready in.
+        if (!isset($resolved_asset['legal_entity'][$contributor_name]['contributions'][$contribution_name])) {
+          $resolved_asset['legal_entity'][$contributor_name]['contributions'][$contribution_name] = array();
+        }
+        if (!isset($resolved_asset['legal_entity'][$contributor_name]['roles'][$role_name])) {
+          $resolved_asset['legal_entity'][$contributor_name]['roles'][$role_name] = array();
+        }
+
+      }
+
+      // If contribution is an asset.
+      elseif ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
+        $child_asset = $contribution_wrapper->field_cont_contributor->value();
+        // @todo - debuging.
+        //drupal_set_message(print_r($child_asset, TRUE));
+        kendra_e_resolve_asset($child_asset);
+//        $child_asset_wrapper = entity_metadata_wrapper('node', $child_asset);
+//        kendra_e_get_asset_contributions($child_asset_wrapper);
+      }
+
+
+    }
+    return $resolved_asset;
+
+}
+
+
+/**
+ * Get asset contributions.
+ *
+ * used by kendra_e_get_contribution_display.
+ */
 function kendra_e_get_asset_contributions($asset, $right_type_id = null ) {
   $contributions = array();
   $aid = $asset->nid->value();
@@ -82,3 +148,79 @@ function kendra_e_get_asset_contributions($asset, $right_type_id = null ) {
   }
   return $contributions;
 }
+
+/**
+ * Get a list of all the right types asosated with an asset.
+ */
+function kendra_e_get_asset_right_types($asset_nid) {
+
+  //SELECT distinct td.tid, td.name
+  //FROM kendra_hub_v2.field_data_field_cont_work wrk
+  //inner join field_data_field_cont_t_role role on wrk.entity_id = role.entity_id
+  //inner join field_data_field_t_right_type rt on role.field_cont_t_role_tid = rt.entity_id
+  //inner join taxonomy_term_data td on rt.field_t_right_type_tid = td.tid
+  //where field_cont_work_target_id = 12
+
+  $query = db_select('field_data_field_cont_work', 'wrk');
+  // Make it a distinct query.
+  $query->distinct();
+  // Add the fields.
+  $query->fields('td', array('tid', 'name'));
+  // Joins.
+  $query->join('field_data_field_cont_t_role', 'role', 'wrk.entity_id = role.entity_id');
+  $query->join('field_data_field_t_right_type', 'rt', 'role.field_cont_t_role_tid = rt.entity_id');
+  $query->join('taxonomy_term_data', 'td', 'rt.field_t_right_type_tid = td.tid');
+  // Conditions.
+  $query->condition('field_cont_work_target_id', $asset_nid);
+  // Execute.
+  $result = $query->execute();
+  // Get all the tids returned by the query.
+  $rt_list = array();
+  while($record = $result->fetchAssoc()) {
+    $rt_list[] = $record;
+  }
+  return $rt_list;
+}
+
+
+/**
+ * Get the role with name of $role_name and linked to $right_type_id.
+ *
+ * @todo - in the future we will add another taxonomy to replace the need for
+ * role name but currently both "Sample" & "Embedded clip" are used by
+ * convention.
+*/
+function kendra_e_get_right_type_role($right_type_id, $role_name) {
+
+  //SELECT td.tid FROM taxonomy_term_data td
+  //inner join field_data_field_t_right_type rt on td.tid = rt.entity_id
+  //where td.name = 'Sample' and rt.field_t_right_type_tid = 1
+
+  $query = db_select('taxonomy_term_data', 'td');
+  // Add the fields.
+  $query->fields('td', array('tid'));
+  // Join the right type table.
+  $query->join('field_data_field_t_right_type', 'rt', 'td.tid = rt.entity_id');
+  // Conditions.
+  $query->condition('td.name', $role_name);
+  $query->condition('rt.field_t_right_type_tid', $right_type_id);
+  // Execute and return.
+  $result = $query->execute();
+  return $result->fetchField();
+
+}
+
+
+/**
+ * Get contribution nodes that share the same role type for role an parent asset.
+ *
+ * If $contribution is performance->Sample of song B by song A
+ * the function will return
+ * composition->sample  of song B by song A
+ * recording->sample  of song B by song A
+ */
+function kendra_e_get_related_contribution_records($contribution) {
+
+}
+
+
