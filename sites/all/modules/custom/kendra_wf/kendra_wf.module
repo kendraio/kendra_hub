@@ -95,7 +95,23 @@ function kendra_wf_rules_action_info() {
     'provides' => array(
       'entity_loaded' => array(
         'type' => 'node',
-        'label' => t('Loaded entity'),
+        'label' => t('Loaded entities'),
+        'save' => TRUE,
+      )),
+  );
+  $actions['kendra_wf_load_related_contribution_records'] = array(
+    'label' => t('Load related contribution records'),
+    'group' => t('Kendra'),
+    'parameter' => array(
+      'contribution' => array(
+        'type' => 'node',
+        'label' => t('Contribution'),
+        'save' => TRUE,
+      )),
+    'provides' => array(
+      'loaded_contributions' => array(
+        'type' => 'list<node>',
+        'label' => t('Loaded Contribution'),
         'save' => TRUE,
       )),
   );
@@ -126,6 +142,13 @@ function kendra_wf_load_embedded_contribution_from_session() {
   $node = node_load($nid);
   $wrapper = entity_metadata_wrapper('node', $node);
   return array('entity_loaded' => $wrapper);
+}
+
+function kendra_wf_load_related_contribution_records($contribution) {
+
+  $contributions = kendra_e_get_related_contribution_records($contribution);
+
+  return array('loaded_contributions' => $contributions);
 }
 
 
@@ -225,7 +248,7 @@ function kendra_wf_get_current_aggregated_rights_table() {
 
     $content .= '<h2>Aggregated Rights Report</h2>';
 
-    $content .= '<h3>Split</h3>';
+    $content .= '<h3>Rights Split</h3>';
     $content .= '<table class="views-table cols-2">';
     $content .= '  <thead>';
     $content .= '    <tr>';
@@ -248,7 +271,7 @@ function kendra_wf_get_current_aggregated_rights_table() {
 
 
 
-    $content .= '<h3>Legal Entities</h3>';
+    $content .= '<h3>Legal Entities Split</h3>';
     // Print table headings.
     $content .= '<table class="aggregated-rights-table cols-3">';
     $content .= '  <thead>';

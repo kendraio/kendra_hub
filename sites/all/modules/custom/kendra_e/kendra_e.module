@@ -218,9 +218,74 @@ function kendra_e_get_right_type_role($right_type_id, $role_name) {
  * the function will return
  * composition->sample  of song B by song A
  * recording->sample  of song B by song A
+ * ....
  */
 function kendra_e_get_related_contribution_records($contribution) {
+  $result = array();
+  // Get the name of the role type.
+  $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
 
+  // Get all the roles types with this name.
+  $contribution_role_name = $contribution_wrapper->field_cont_t_role->name->value();
+  $rt_list = kendra_e_get_related_role_types($contribution_role_name);
+
+  // Remove the term from $contribution.
+  $right_type_id = $contribution_wrapper->field_cont_t_role->tid->value();
+  foreach ($rt_list as $key => $value) {
+    if ($value['tid'] == $right_type_id) {
+      unset($rt_list[$key]);
+      break;
+    }
+  }
+
+
+  // Collapse the $rt_list.
+  $rights = array();
+  foreach ($rt_list as $key => $value) {
+    $rights[] = $value['tid'];
+  }
+  // The parent asset.
+  $work_nid = $contribution_wrapper->field_cont_work->getIdentifier();
+
+  // Get all the contribution entities relating to the same work with the above
+  // roles.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'contribution')
+    // ->propertyCondition('status', 1)  // Not sure if we should only return published nodes?
+    ->fieldCondition('field_cont_t_role', 'tid', $rights, 'in')
+    ->fieldCondition('field_cont_work', 'target_id', $work_nid);
+  $result = $query->execute();
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    //drupal_set_message('$news_items_nids '. print_r($nids,TRUE));
+    $result = entity_load('node', $nids);
+  }
+  return $result;
 }
 
+/**
+ * Gets all the role types of the same name for all right types.
+ *
+ * @todo - the name should be replaced by a new taxonomy somthing like
+ * "role type type" (the type of role type i.e. a "smaple").
+ */
+function kendra_e_get_related_role_types($role_name) {
+  //select tid from
+  //taxonomy_term_data td
+  //where td.name = 'Sample'
 
+  $query = db_select('taxonomy_term_data', 'td');
+  // Add the fields.
+  $query->fields('td', array('tid'));
+  // Conditions.
+  $query->condition('td.name', $role_name);
+  // Execute and return.
+  $result = $query->execute();
+  // Get all the tids returned by the query.
+  $rt_list = array();
+  while($record = $result->fetchAssoc()) {
+    $rt_list[] = $record;
+  }
+  return $rt_list;
+}
