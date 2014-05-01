@@ -205,11 +205,13 @@ function kendra_wf_sample_asset_form_submit($form, &$form_state) {
       //drupal_set_message('$tid= ' . $tid);
     }
   }
-  // @todo - send user to the first contribution edit and after he saves -
-  // Copy the usage to all the other contributions.
+  $new_contributions = kendra_e_get_contribution_nodes($source_node, $target_node);
+  $new_contribution = array_shift($new_contributions);
 
-  // Temporery until above is completed - go to target asset.
-  drupal_goto('node/' . $target_nid);
+  // Send user to the first contribution edit and after he saves a rule will
+  // trigger a copy of the usage to all the other contributions.
+  drupal_goto('node/' . $new_contribution->nid . '/edit',  array('query' => array('destination' => 'node/' . $target_nid)));
+  //drupal_goto('node/' . $target_nid);
 }
 
 /**

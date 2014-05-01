@@ -289,3 +289,21 @@ function kendra_e_get_related_role_types($role_name) {
   }
   return $rt_list;
 }
+
+
+function kendra_e_get_contribution_nodes($source_node, $target_node) {
+  $result = array();
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'contribution')
+    // ->propertyCondition('status', 1)  // Not sure if we should only return published nodes?
+    ->fieldCondition('field_cont_work', 'target_id', $target_node->nid)
+    ->fieldCondition('field_cont_contributor', 'target_id', $source_node->nid);
+  $result = $query->execute();
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    //drupal_set_message('$news_items_nids '. print_r($nids,TRUE));
+    $result = entity_load('node', $nids);
+  }
+  return $result;
+}
