@@ -111,87 +111,230 @@ function kendra_e_resolve_asset($asset) {
 }
 
 /**
- * Calcolate the asset contributions.
- *
- * The function will build up the resolved_asset_contributions array
- * This will have two parts
- * - $rac['asset'] - all the loaded assets and their usesage caloclations reletive
- *   to the asset.
- * - $rac['ct'] - contribution tree will hold the contributions relationship
- *   data.
- *
- * $rac['asset'][0]['nid'] - A single asset.
- * $rac['asset'][0]['C'] - a contribution record
- *
- * $rac['asset'][0]['C'] - an asset contributions
- * $rac['asset'][0]['C'][0]['nid'] - the id of the contribution
- * $rac['asset'][0]['C'][0]['type'] - Asset / Legal entity
- * $rac['asset'][0]['C'][0]['nid']
- * $rac['asset'][0]['C'][0]['SU'] - Source Usage record
- * $rac['asset'][0]['C'][0]['SU']['start']
- * $rac['asset'][0]['C'][0]['SU']['end']
- * $rac['asset'][0]['C'][0]['TU'] - Target Usage records
- * $rac['asset'][0]['C'][0]['TU'][0]['start']
- * $rac['asset'][0]['C'][0]['TU'][0]['end']
- * $rac['asset'][0]['C'][0]['W']  W: Usage weight (field_cont_usage_weight)
- * $rac['asset'][1]....
- * $rac['asset'][2]....
- * ....................
- * $rac['asset'][x]....
- *
- * Notes:
- * We have two options in loading $rac['asset'][0]['C']:
- * 1) Load all contribution for each new asset incownterd
- * 2) Load contributions beetwin source useage start and end.
- * We will go with 1 as it is easier to implament as an asset can be used multiple times.
- *
- *
- * $rac['ut'] - usage tree
- * $rac['ut']['a'] - Root asset
- * $rac['ut']['a']['path'] - A pointer to the asset - $rac['asset'][0]
- *
- * $rac['ut']['a']['c']
- *
- * $rac['ut']['a']['c'] - contributions
- * $rac['ut']['a']['c']['0']
- * $rac['ut']['a']['c']['0']['path'] - A pointer to the asset contribution - $rac['asset'][0]['C'][0]
- * $rac['ut']['a']['c']['0']['points'] - see notes
- * $rac['ut']['a']['c']['0']['percent'] - see notes
- *
- * $rac['ut']['a']['c']['0']['c'][0] - sub contribution (same structure as above)
- * $rac['ut']['a']['c']['0']['c'][0]['path']
- * $rac['ut']['a']['c']['0']['c'][0]['points']
- * $rac['ut']['a']['c']['0']['c'][0]['percent']
- *
- * Notes:
- * points - Combined Target Usage within Source Usage of the perent contribution
- * Usage weight.
- * The source for the root will be passed in - 0-100 for a song or other for a sample.
- *
- * percent - points / combined pointsper of the same level.
- *
- *
+ * Resolve the legal entities and their rights percentages.
  */
-function kendra_e_resolve_asset_contributions($asset, $start, $end) {
-  // The array to hold the resolved asset contributions data.
-  $rac = &drupal_static('kendra_hub_resolved_asset_contributions');
-  if (!isset($rac)) {
-      $rac = array();
+function kendra_e_resolve_asset_rights($asset, $start, $end) {
+
+  // The array to hold the resolved asset rights data.
+  $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
+  if (!isset($resolved_asset_rights)) {
+      $resolved_asset_rights = array();
   }
-  // recorsevly cycle contributions of asset
-  //   build $rac['asset']
-  //   build $rac['ut'] -> ['path']
 
-  // recorsevly cycle $rac['ut']
-  //   build ['points'] ['percent']
+  // Collect an array to hold rights information.
+  // Builds the rights array with the following format:
+  // ['contributions'][nid]
+  // ['contributions'][nid]['name']
+  // ['contributions'][nid]['type'] asset / legal_entity
+  // ['contributions'][nid]['contributions']
+  // @todo We are currently not differentiating between right types - so colected
+  // data and calculations need to take that into consideration.
+  // @todo we need to collect the role names
+  $rights = array();
+  // Cpllect all the rights information.
+  _kendra_e_collect_asset_rights($rights, $asset, $start, $end);
 
-  // recorsevly cycle $rac['ut']
-  //   Extract Legal entities and their percenteges.
+
+  // Collect the percentage from the collected rights array.
+  // Adds to rights array:
+  // ['contributions'][nid]['percentage']
+  if (isset($rights['contributions'])) {
+    // Calcolate percentages.
+    _kendra_e_calc_asset_rights_percentage($rights['contributions']);
+  }
+
+  // Total each of the artists aggregated rights percentages.
+  _kendra_e_resolve_asset_rights_percentage($rights['contributions']);
+  foreach ($resolved_asset_rights as $artist_name => &$artist) {
+    $total = 0;
+    foreach ($artist['contributions'] as $value) {
+      $total = $total + $value;
+    }
+    $artist['percentage'] =$total ;
+  }
+
+
+
+  drupal_set_message(print_r($resolved_asset_rights,TRUE));
+
+  return $resolved_asset_rights;
 }
+
+
+
+/**
+ *
+ * Resolve the rights of a clip - to be called recessively.
+ *
+ * The call for Under pressure will be: kendra_e_resolve_asset({obj}, 0 , 100);
+ */
+function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
+
+   $asset_wrapper = entity_metadata_wrapper('node', $asset);
+   // Get all contributions within start end.
+   $contributions = kendra_e_get_partial_asset_contributions($asset_wrapper, NULL ,$start, $end);
+    // Cycle contributions
+    foreach ($contributions as $contribution) {
+      // Get information from the contribution.
+      // $role = $contribution_wrapper->field_cont_t_role->value();
+      $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
+
+      // Calcolate points =  Combined Target Usage x Usage weight
+      $combined_target_usage = kendra_e_get_total_contributions_target_usage($contribution_wrapper,$start, $end);
+      if ($combined_target_usage > 0) {
+        $rights['contributions'][$contribution->nid]['name'] = $contribution_wrapper->field_cont_contributor->title->value();;
+        $usage_weight = $contribution_wrapper->field_cont_usage_weight->value();
+        $points = $combined_target_usage * $usage_weight;
+        $rights['contributions'][$contribution->nid]['points'] = $points;
+        // If an contributions comes from an asset?
+        if ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
+          // Set the type.
+          $rights['contributions'][$contribution->nid]['type'] = 'asset';
+          $sub_asset = $contribution_wrapper->field_cont_contributor->value();
+          $sub_start = $contribution_wrapper->field_cont_source_usage->from->value();
+          $sub_end = $contribution_wrapper->field_cont_source_usage->to->value();
+          _kendra_e_collect_asset_rights($rights['contributions'][$contribution->nid], $sub_asset, $sub_start, $sub_end);
+
+        }
+        // If contribution is a legal entity
+        else if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
+          // Set the type.
+          $rights['contributions'][$contribution->nid]['type'] = 'legal_entity';
+        }
+      }
+    }
+
+}
+
+
+function _kendra_e_calc_asset_rights_percentage(&$contributions) {
+  // Calcolate the totle points.
+  $total_points = 0;
+  foreach ($contributions as $contribution) {
+    $total_points = $total_points +  $contribution['points'];
+  }
+  // Calcolate the percentage.
+  foreach ($contributions as &$contribution) {
+    $percentage =  $contribution['points'] / $total_points * 100;
+    $contribution['percentage'] = $percentage;
+    //drupal_set_message('$percentage = ' . $percentage);
+  }
+  // Calcolate sub contributions.
+  foreach ($contributions as &$c) {
+    //if ( ($c['type'] == 'asset') && isset($c['contributions'])) {
+    if (isset($c['contributions'])) {
+      _kendra_e_calc_asset_rights_percentage($c['contributions']);
+    }
+  }
+}
+
+/**
+ * Resolve all the aggregated rights percentages.
+ *
+ * $contributions - the collections of contributions (can contain sub
+ * contributions)
+ *
+ * $share - The percent of of the total 100% the contributions share. defaults
+ * to 100%
+ */
+function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100) {
+  // The array to hold the resolved asset rights data.
+  $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
+  if (!isset($resolved_asset_rights)) {
+      $resolved_asset_rights = array();
+  }
+
+  foreach ($contributions as $contribution) {
+    if ($contribution['type'] == 'legal_entity') {
+      $name = $contribution['name'];
+      // Caloclate the contribution percentage.
+      $resolved_asset_rights[$name]['contributions'][] = $contribution['percentage'] * $share / 100;
+    }
+    else if ($contribution['type'] == 'asset') {
+      _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage']);
+    }
+  }
+}
+
+/**
+ * Calculate the total target usage with in the start end range.
+ */
+function kendra_e_get_total_contributions_target_usage($contribution , $start, $end) {
+  $total = 0;
+  foreach ($contribution->field_cont_target_usage as $target_usage) {
+    // Get start and end.
+    $from = $target_usage->from->value();
+    $to = $target_usage->to->value();
+    // Adjust to range.
+    if ($from < $start) {
+      $from = $start;
+    }
+    if ($to > $end) {
+      $to = $end;
+    }
+    // Just to be sure we dont add nagative usage (should never be the case).
+    if ($from < $to) {
+      // Add to total.
+      $total = $total + ($to - $from);
+    }
+     //drupal_set_message('from ' . $from . ' to ' . $to);
+  }
+  //drupal_set_message('$total= ' . $total);
+  return $total;
+}
+
+/**
+ * Get the asset contributions that are positioned between start and end.
+ *
+ * used by kendra_e_get_contribution_display.
+ */
+function kendra_e_get_partial_asset_contributions($asset, $right_type_id = null , $start, $end) {
+  $contributions = array();
+  $aid = $asset->nid->value();
+  // Build the query.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'contribution')
+    ->propertyCondition('status', 1)
+    ->fieldCondition('field_cont_work', 'target_id', $aid, '=')
+    ->fieldCondition('field_cont_target_usage', 'from', $end, '<')
+    ->fieldCondition('field_cont_target_usage', 'to', $start, '>');
+  $result = $query->execute();
+  // @todo - the structure of the data tables and the drupal generated query
+  // results in records that are outside the usage when multiple target usage
+  // are present, as we later on use kendra_e_get_total_contributions_target_usage()
+  // to calculate actual usage this is ok but we can look at resolving this
+  // using an improved query.
+
+  // Just in case query comes back empty.
+  if (empty($result)) {
+    return array();
+  }
+
+  // extract the contributions.
+  $nodes = entity_load('node', array_keys($result['node']));
+  foreach ($nodes as $contribution) {
+    if (!isset($right_type_id)) {
+      $contributions[] = $contribution;
+    }
+    else {
+      $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
+      $c_right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
+      if ($c_right_type_id == $right_type_id) {
+        $contributions[] = $contribution;
+      }
+    }
+  }
+  return $contributions;
+}
+
+
 /**
  * Get asset contributions.
  *
  * used by kendra_e_get_contribution_display.
+ * @todo - can probably be replacced by kendra_e_get_partial_asset_contributions()
+ * with a 0 to 100 as a default.
  */
 function kendra_e_get_asset_contributions($asset, $right_type_id = null ) {
   $contributions = array();
@@ -383,4 +526,86 @@ function kendra_e_get_contribution_nodes($source_node, $target_node) {
     $result = entity_load('node', $nids);
   }
   return $result;
+}
+
+
+/**
+ * @todo - remove as this is was replaced by kendra_e_resolve_asset_rights()
+ *
+ * Calcolate the asset contributions.
+ *
+ * The function will build up the resolved_asset_contributions array
+ * This will have two parts
+ * - $rac['asset'] - all the loaded assets and their usesage caloclations reletive
+ *   to the asset.
+ * - $rac['ct'] - contribution tree will hold the contributions relationship
+ *   data.
+ *
+ * $rac['asset'][0]['nid'] - A single asset.
+ * $rac['asset'][0]['C'] - a contribution record
+ *
+ * $rac['asset'][0]['C'] - an asset contributions
+ * $rac['asset'][0]['C'][0]['nid'] - the id of the contribution
+ * $rac['asset'][0]['C'][0]['type'] - Asset / Legal entity
+ * $rac['asset'][0]['C'][0]['nid']
+ * $rac['asset'][0]['C'][0]['SU'] - Source Usage record
+ * $rac['asset'][0]['C'][0]['SU']['start']
+ * $rac['asset'][0]['C'][0]['SU']['end']
+ * $rac['asset'][0]['C'][0]['TU'] - Target Usage records
+ * $rac['asset'][0]['C'][0]['TU'][0]['start']
+ * $rac['asset'][0]['C'][0]['TU'][0]['end']
+ * $rac['asset'][0]['C'][0]['W']  W: Usage weight (field_cont_usage_weight)
+ * $rac['asset'][1]....
+ * $rac['asset'][2]....
+ * ....................
+ * $rac['asset'][x]....
+ *
+ * Notes:
+ * We have two options in loading $rac['asset'][0]['C']:
+ * 1) Load all contribution for each new asset incownterd
+ * 2) Load contributions beetwin source useage start and end.
+ * We will go with 1 as it is easier to implament as an asset can be used multiple times.
+ *
+ *
+ * $rac['ut'] - usage tree
+ * $rac['ut']['a'] - Root asset
+ * $rac['ut']['a']['path'] - A pointer to the asset - $rac['asset'][0]
+ *
+ * $rac['ut']['a']['c']
+ *
+ * $rac['ut']['a']['c'] - contributions
+ * $rac['ut']['a']['c']['0']
+ * $rac['ut']['a']['c']['0']['path'] - A pointer to the asset contribution - $rac['asset'][0]['C'][0]
+ * $rac['ut']['a']['c']['0']['points'] - see notes
+ * $rac['ut']['a']['c']['0']['percent'] - see notes
+ *
+ * $rac['ut']['a']['c']['0']['c'][0] - sub contribution (same structure as above)
+ * $rac['ut']['a']['c']['0']['c'][0]['path']
+ * $rac['ut']['a']['c']['0']['c'][0]['points']
+ * $rac['ut']['a']['c']['0']['c'][0]['percent']
+ *
+ * Notes:
+ * points - Combined Target Usage within Source Usage of the perent contribution
+ * Usage weight.
+ * The source for the root will be passed in - 0-100 for a song or other for a sample.
+ *
+ * percent - points / combined pointsper of the same level.
+ *
+ *
+ */
+function kendra_e_resolve_asset_contributions($asset, $start, $end) {
+  // The array to hold the resolved asset contributions data.
+  $rac = &drupal_static('kendra_hub_resolved_asset_contributions');
+  if (!isset($rac)) {
+      $rac = array();
+  }
+  // recorsevly cycle contributions of asset
+  //   build $rac['asset']
+  //   build $rac['ut'] -> ['path']
+
+  // recorsevly cycle $rac['ut']
+  //   build ['points'] ['percent']
+
+  // recorsevly cycle $rac['ut']
+  //   Extract Legal entities and their percenteges.
 }

@@ -248,6 +248,10 @@ function kendra_wf_get_current_aggregated_rights_table() {
   if ($asset->type == 'asset') {
     $resolved_asset = kendra_e_resolve_asset($asset);
 
+    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 22, 78);
+    //drupal_set_message(print_r($resolved_asset_rights, TRUE));
+    //$resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 10, 90);
+
     $content .= '<h2>Aggregated Rights Report</h2>';
 
     $content .= '<h3>Rights Split</h3>';
@@ -262,11 +266,11 @@ function kendra_wf_get_current_aggregated_rights_table() {
     $content .= '  <tbody>';
     $content .= '    <tr>';
     $content .= '       <td>Composition</td>';
-    $content .= '       <td>40%</td>';
+    $content .= '       <td>50%</td>';
     $content .= '    </tr>    ';
     $content .= '    <tr>';
     $content .= '       <td>Performance</td>';
-    $content .= '       <td>60%</td>';
+    $content .= '       <td>50%</td>';
     $content .= '    </tr>    ';
     $content .= '  </tbody>';
     $content .= '</table>';
