@@ -127,11 +127,13 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
   // ['contributions'][nid]['name']
   // ['contributions'][nid]['type'] asset / legal_entity
   // ['contributions'][nid]['contributions']
-  // @todo We are currently not differentiating between right types - so colected
-  // data and calculations need to take that into consideration.
-  // @todo we need to collect the role names
+  // ['contributions'][nid]['role']
+  // @todo We are currently not differentiating between right types - so
+  // collected data and calculations need to take that into consideration.
   $rights = array();
   // Cpllect all the rights information.
+  // This step collects the details from the database. All other functions
+  // work on the extracted data.
   _kendra_e_collect_asset_rights($rights, $asset, $start, $end);
 
 
@@ -143,8 +145,17 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
     _kendra_e_calc_asset_rights_percentage($rights['contributions']);
   }
 
-  // Total each of the artists aggregated rights percentages.
+  // Build a list of legal entities and their contribution percentages.
+  // Format:
+  // $resolved_asset_rights[name]
+  // $resolved_asset_rights[name]['roles'][role] = role
+  // $resolved_asset_rights[name]['contributions']
   _kendra_e_resolve_asset_rights_percentage($rights['contributions']);
+
+
+  // Total each of the artists aggregated rights percentages.
+  // Adds
+  // $resolved_asset_rights[name]['percentage']
   foreach ($resolved_asset_rights as $artist_name => &$artist) {
     $total = 0;
     foreach ($artist['contributions'] as $value) {
@@ -152,10 +163,10 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
     }
     $artist['percentage'] =$total ;
   }
-
-
-
-  drupal_set_message(print_r($resolved_asset_rights,TRUE));
+  
+// Debug.
+//  print_r($rights);
+//  drupal_set_message(print_r($resolved_asset_rights,TRUE));
 
   return $resolved_asset_rights;
 }
@@ -183,6 +194,9 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
       $combined_target_usage = kendra_e_get_total_contributions_target_usage($contribution_wrapper,$start, $end);
       if ($combined_target_usage > 0) {
         $rights['contributions'][$contribution->nid]['name'] = $contribution_wrapper->field_cont_contributor->title->value();;
+        $rights['contributions'][$contribution->nid]['role'] = $contribution_wrapper->field_cont_t_role->name->value();
+        // @todo - we need to add righ type support.
+        // $right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
         $usage_weight = $contribution_wrapper->field_cont_usage_weight->value();
         $points = $combined_target_usage * $usage_weight;
         $rights['contributions'][$contribution->nid]['points'] = $points;
@@ -247,11 +261,14 @@ function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100)
   foreach ($contributions as $contribution) {
     if ($contribution['type'] == 'legal_entity') {
       $name = $contribution['name'];
+      $role = $contribution['role'];
+      // Add the role to the user.
+      $resolved_asset_rights[$name]['roles'][$role] = $role;
       // Caloclate the contribution percentage.
       $resolved_asset_rights[$name]['contributions'][] = $contribution['percentage'] * $share / 100;
     }
     else if ($contribution['type'] == 'asset') {
-      _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage']);
+      _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage'] * $share / 100);
     }
   }
 }

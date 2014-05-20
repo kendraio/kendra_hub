@@ -246,11 +246,6 @@ function kendra_wf_get_current_aggregated_rights_table() {
   $nid = arg(1);
   $asset = node_load($nid);
   if ($asset->type == 'asset') {
-    $resolved_asset = kendra_e_resolve_asset($asset);
-
-    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 22, 78);
-    //drupal_set_message(print_r($resolved_asset_rights, TRUE));
-    //$resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 10, 90);
 
     $content .= '<h2>Aggregated Rights Report</h2>';
 
@@ -290,20 +285,36 @@ function kendra_wf_get_current_aggregated_rights_table() {
     $content .= '  </thead>';
     $content .= '  <tbody>';
 
-    //return print_r($resolved_asset, TRUE);
-    //drupal_set_message(print_r($resolved_asset, TRUE));
-    foreach ($resolved_asset['legal_entity'] as $key => $legal_entity) {
+    //$resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 22, 78);
+    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100);
+    foreach ($resolved_asset_rights as $key => $legal_entity) {
       $content .= '      <tr class="odd views-row-first">';
       $content .= '              <td class="">' . $key . '</td>';
       $roles = '';
       foreach ($legal_entity['roles'] as $role => $value) {
         $roles .= $role . ' , ';
       }
+      $share = $legal_entity['percentage'];
       $roles = substr($roles, 0, -2);
       $content .= '              <td class="">' . $roles . '</td>';
-      $content .= '              <td class=""> X %</td>';
+      $content .= '              <td class="">' . $share . '%</td>';
       $content .= '     </tr>';
     }
+
+//    // Table with no aggregation of rights percentage
+//    $resolved_asset = kendra_e_resolve_asset($asset);
+//    foreach ($resolved_asset['legal_entity'] as $key => $legal_entity) {
+//      $content .= '      <tr class="odd views-row-first">';
+//      $content .= '              <td class="">' . $key . '</td>';
+//      $roles = '';
+//      foreach ($legal_entity['roles'] as $role => $value) {
+//        $roles .= $role . ' , ';
+//      }
+//      $roles = substr($roles, 0, -2);
+//      $content .= '              <td class="">' . $roles . '</td>';
+//      $content .= '              <td class=""> X %</td>';
+//      $content .= '     </tr>';
+//    }
 
 
     $content .= '  </tbody>';
