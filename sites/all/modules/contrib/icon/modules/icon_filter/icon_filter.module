@@ -1,0 +1,52 @@
+<?php
+/**
+ * @file
+ * icon_filter.module
+ * Provides a filter for text fields to replace an icon token with icon markup.
+ */
+
+/**
+ * Implements hook_filter_info().
+ */
+function icon_filter_filter_info() {
+  $filters['icon'] = array(
+    'title' => t('Convert [icon:%bundle:%icon] tags'),
+    'description' => t('Converts all [icon:%bundle:%icon] tags into the correct markup necessary for displaying a specific icon. Replace the %bundle with the bundle machine name and replace %icon with the icon machine name.'),
+    'process callback' => '_icon_filter',
+    'tips callback' => '_icon_filter_tips',
+  );
+  return $filters;
+}
+
+/**
+ * Tips callback for icon filter.
+ */
+function _icon_filter_tips($filter, $format, $long = FALSE) {
+  if ($long) {
+    return t('Converts all [icon:%bundle:%icon] tags into the correct markup necessary for displaying a specific icon. Replace the %bundle with the bundle machine name and replace %icon with the icon machine name.');
+  }
+  else {
+    return t('Convert [icon:%bundle:%icon] tags.');
+  }
+}
+
+/**
+ * Process callback for icon filter.
+ */
+function _icon_filter($text, $filter, $format, $langcode, $cache, $cache_id) {
+  $regex = '/\[icon:([^:]*):([^\]]*)\]/';
+  $icons = array();
+  if (preg_match_all($regex, $text, $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      if (!isset($icons[$match[0]])) {
+        $icons[$match[0]] = theme('icon', array('bundle' => $match[1], 'icon' => $match[2]));
+      }
+    }
+  }
+  foreach ($icons as $search => $replace) {
+    if (!empty($replace)) {
+      $text = str_replace($search, $replace, $text);
+    }
+  }
+  return $text;
+}
