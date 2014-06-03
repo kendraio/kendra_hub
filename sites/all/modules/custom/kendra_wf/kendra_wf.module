@@ -249,76 +249,48 @@ function kendra_wf_get_current_aggregated_rights_table() {
 
     $content .= '<h2>Aggregated Rights Report</h2>';
 
-    $content .= '<h3>Rights Split</h3>';
-    $content .= '<table class="views-table cols-2">';
-    $content .= '  <thead>';
-    $content .= '    <tr>';
-    $content .= '       <th>Right Type</th>';
-    $content .= '       <th>Split</th>';
-    $content .= '    </tr> ';
-    $content .= '  </thead>';
+    $content .= theme('rights_split', array(
+      'title' => t('Rights split'),
+      'rights' => array(
+        'Composition' => '50%',
+        'Performance' => '50%',
+      ),
+    ));
 
-    $content .= '  <tbody>';
-    $content .= '    <tr>';
-    $content .= '       <td>Composition</td>';
-    $content .= '       <td>50%</td>';
-    $content .= '    </tr>    ';
-    $content .= '    <tr>';
-    $content .= '       <td>Performance</td>';
-    $content .= '       <td>50%</td>';
-    $content .= '    </tr>    ';
-    $content .= '  </tbody>';
-    $content .= '</table>';
-
-
-
-    $content .= '<h3>Legal Entities Split</h3>';
-    // Print table headings.
-    $content .= '<table class="aggregated-rights-table cols-3">';
-    $content .= '  <thead>';
-
-    $content .= '    <tr>';
-    $content .= '       <th>Legal Entity</th>';
-    $content .= '       <th>Contributions</th>';
-    $content .= '       <th>Percent</th>';
-    $content .= '    </tr>    ';
-    $content .= '  </thead>';
-    $content .= '  <tbody>';
-
-    //$resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 22, 78);
+    $splits = array();
     $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100);
     foreach ($resolved_asset_rights as $key => $legal_entity) {
-      $content .= '      <tr class="odd views-row-first">';
-      $content .= '              <td class="">' . $key . '</td>';
-      $roles = '';
-      foreach ($legal_entity['roles'] as $role => $value) {
-        $roles .= $role . ' , ';
-      }
-      $share = $legal_entity['percentage'];
-      $roles = substr($roles, 0, -2);
-      $content .= '              <td class="">' . $roles . '</td>';
-      $content .= '              <td class="">' . $share . '%</td>';
-      $content .= '     </tr>';
+      $splits[] = array(
+        'key' => $key,
+        'roles' => implode(', ', $legal_entity['roles']),
+        'share' => number_format($legal_entity['percentage'], 2) . '%',
+      );
     }
 
-//    // Table with no aggregation of rights percentage
-//    $resolved_asset = kendra_e_resolve_asset($asset);
-//    foreach ($resolved_asset['legal_entity'] as $key => $legal_entity) {
-//      $content .= '      <tr class="odd views-row-first">';
-//      $content .= '              <td class="">' . $key . '</td>';
-//      $roles = '';
-//      foreach ($legal_entity['roles'] as $role => $value) {
-//        $roles .= $role . ' , ';
-//      }
-//      $roles = substr($roles, 0, -2);
-//      $content .= '              <td class="">' . $roles . '</td>';
-//      $content .= '              <td class=""> X %</td>';
-//      $content .= '     </tr>';
-//    }
+    $content .= theme('entities_split', array(
+      'title' => t('Legal entities split'),
+      'splits' => $splits,
+    ));
 
-
-    $content .= '  </tbody>';
-    $content .= '</table>';
   }
   return $content;
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function kendra_wf_theme($existing, $type, $theme, $path) {
+  return array(
+    'rights_split' => array(
+      'template' => 'rights-split',
+      'path' => $path . '/templates',
+      'variables' => array('rights' => array()),
+    ),
+    'entities_split' => array(
+      'template' => 'entities-split',
+      'path' => $path . '/templates',
+      'variables' => array('splits' => array()),
+    ),
+  );
 }
