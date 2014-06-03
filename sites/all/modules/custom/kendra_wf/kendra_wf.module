@@ -242,18 +242,19 @@ function kendra_wf_block_view($delta) {
 
 
 function kendra_wf_get_current_aggregated_rights_table() {
-  $content = '';
+  $content = array();
   $nid = arg(1);
   $asset = node_load($nid);
   if ($asset->type == 'asset') {
+    $content['title'] = array(
+      '#markup' => '<h2>Aggregated rights report</h2>',
+    );
 
-    $content .= '<h2>Aggregated Rights Report</h2>';
-
-    $content .= theme('rights_split', array(
+    $content['rights'] = theme('rights_split', array(
       'title' => t('Rights split'),
       'rights' => array(
-        'Composition' => '50%',
-        'Performance' => '50%',
+        array('Composition', '50%'),
+        array('Performance', '50%'),
       ),
     ));
 
@@ -267,7 +268,7 @@ function kendra_wf_get_current_aggregated_rights_table() {
       );
     }
 
-    $content .= theme('entities_split', array(
+    $content['splits'] = theme('entities_split', array(
       'title' => t('Legal entities split'),
       'splits' => $splits,
     ));
@@ -283,14 +284,34 @@ function kendra_wf_get_current_aggregated_rights_table() {
 function kendra_wf_theme($existing, $type, $theme, $path) {
   return array(
     'rights_split' => array(
-      'template' => 'rights-split',
-      'path' => $path . '/templates',
       'variables' => array('rights' => array()),
     ),
     'entities_split' => array(
-      'template' => 'entities-split',
-      'path' => $path . '/templates',
       'variables' => array('splits' => array()),
     ),
   );
 }
+
+function theme_rights_split($vars) {
+  return array(
+    '#theme' => 'table',
+    '#prefix' => '<h3>' . $vars['title'] . '</h3>',
+    '#header' => array(t('Right type'), t('Split')),
+    '#rows' => $vars['rights'],
+  );
+}
+
+function theme_entities_split($vars) {
+  return array(
+    '#theme' => 'table',
+    '#prefix' => '<h3>' . $vars['title'] . '</h3>',
+    '#header' => array(t('Legal entity'), t('Contributions'), t('Percent')),
+    '#rows' => $vars['splits'],
+  );
+}
+
+
+
+
+
+
