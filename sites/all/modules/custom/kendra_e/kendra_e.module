@@ -150,7 +150,9 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
   // $resolved_asset_rights[name]
   // $resolved_asset_rights[name]['roles'][role] = role
   // $resolved_asset_rights[name]['contributions']
-  _kendra_e_resolve_asset_rights_percentage($rights['contributions']);
+  if (isset($rights['contributions'])) {
+    _kendra_e_resolve_asset_rights_percentage($rights['contributions']);
+  }
 
 
   // Total each of the artists aggregated rights percentages.
@@ -163,7 +165,7 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
     }
     $artist['percentage'] =$total ;
   }
-  
+
 // Debug.
 //  print_r($rights);
 //  drupal_set_message(print_r($resolved_asset_rights,TRUE));
