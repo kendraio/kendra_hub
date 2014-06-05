@@ -9,7 +9,9 @@
  * Get the display of a contribution and recursively traverse it if its an
  * embedded contribution.
  */
+
 function kendra_e_get_contribution_display($contribution) {
+
   $contribution_wrapper = entity_metadata_wrapper('node', $contribution);
 
   // Get information from the contribution role.
@@ -20,34 +22,45 @@ function kendra_e_get_contribution_display($contribution) {
 
   // If the Contribution has a role that has Embedded set to FALSE.
   if (!$embedded) {
-    // Return the Work name and the role
-    $contributor_name = $contribution_wrapper->field_cont_contributor->title->value();
-    return $contributor_name . ' - ' .$contribution_role_name;
-
+    $contributor = $contribution_wrapper->field_cont_contributor->value();
+    if (isset($contributor)) {
+      // Return the Work name and the role
+      $contributor_name = $contribution_wrapper->field_cont_contributor->title->value();
+      return $contributor_name . ' - ' .$contribution_role_name;
+    }
+    else {
+      return 'Unknown - ' .$contribution_role_name;
+    }
   }
 
   // If the Contribution has a role that has Embedded set to TRUE.
   else {
-    // If Contributor is Legal entity.
-    if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
-      // Should not happen - but if it does we will return the contribution tile.
-      return $contribution_wrapper->field_cont_contributor->title->value();
-    }
-    // Asset.
-    else if ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
-      // Get the contributions of the contributer asset of the right type we are
-      // intrested in.
-      $contributions = kendra_e_get_asset_contributions($contribution_wrapper->field_cont_contributor, $right_type_id);
-      // Cycle contribution related to the contributer (field_cont_contributor).
-      $s = '';
-      foreach ($contributions as $value) {
-        $s .= kendra_e_get_contribution_display($value). '&nbsp;';
+    $contributor = $contribution_wrapper->field_cont_contributor->value();
+    if (isset($contributor)) {
+      // If Contributor is Legal entity.
+      if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
+        // Should not happen - but if it does we will return the contribution tile.
+        return $contribution_wrapper->field_cont_contributor->title->value();
       }
-      return $s;
+      // Asset.
+      else if ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
+        // Get the contributions of the contributer asset of the right type we are
+        // intrested in.
+        $contributions = kendra_e_get_asset_contributions($contribution_wrapper->field_cont_contributor, $right_type_id);
+        // Cycle contribution related to the contributer (field_cont_contributor).
+        $s = '';
+        foreach ($contributions as $value) {
+          $s .= kendra_e_get_contribution_display($value). '&nbsp;';
+        }
+        return $s;
+      }
+      // We curently suport only legal entity and asset.
+      else {
+        return 'Unknow asset';
+      }
     }
-    // We curently suport only legal entity and asset.
     else {
-      return 'Unknow asset';
+      return 'Unknow Asset';
     }
   }
 }
@@ -278,7 +291,9 @@ function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100)
       $resolved_asset_rights[$name]['contributions'][] = $contribution['percentage'] * $share / 100;
     }
     else if ($contribution['type'] == 'asset') {
-      _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage'] * $share / 100);
+      if (isset($contribution['contributions'])) {
+        _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage'] * $share / 100);
+      }
     }
   }
 }
