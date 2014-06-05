@@ -195,25 +195,33 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
       // Calcolate points =  Combined Target Usage x Usage weight
       $combined_target_usage = kendra_e_get_total_contributions_target_usage($contribution_wrapper,$start, $end);
       if ($combined_target_usage > 0) {
-        $rights['contributions'][$contribution->nid]['name'] = $contribution_wrapper->field_cont_contributor->title->value();;
-        $rights['contributions'][$contribution->nid]['role'] = $contribution_wrapper->field_cont_t_role->name->value();
+        // Get the fields we need.
+         $contribution = $contribution_wrapper->field_cont_contributor->value();
+         $contribution_role = $contribution_wrapper->field_cont_t_role->value();
+         $usage_weight = $contribution_wrapper->field_cont_usage_weight->value();
+        // Make sure they exist.
+        if (!isset($contribution) || !isset($contribution_role) || !isset($usage_weight) ) {
+          // If any are not set we will ignore the record.
+          continue;
+        }
+
+        $rights['contributions'][$contribution->nid]['name'] = $contribution->title;
+        $rights['contributions'][$contribution->nid]['role'] = $contribution_role->name;
         // @todo - we need to add righ type support.
-        // $right_type_id = $contribution_wrapper->field_cont_t_role->field_t_right_type->tid->value();
-        $usage_weight = $contribution_wrapper->field_cont_usage_weight->value();
         $points = $combined_target_usage * $usage_weight;
         $rights['contributions'][$contribution->nid]['points'] = $points;
         // If an contributions comes from an asset?
-        if ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
+        if ( $contribution->type == 'asset') {
           // Set the type.
           $rights['contributions'][$contribution->nid]['type'] = 'asset';
-          $sub_asset = $contribution_wrapper->field_cont_contributor->value();
+          $sub_asset = $contribution;
           $sub_start = $contribution_wrapper->field_cont_source_usage->from->value();
           $sub_end = $contribution_wrapper->field_cont_source_usage->to->value();
           _kendra_e_collect_asset_rights($rights['contributions'][$contribution->nid], $sub_asset, $sub_start, $sub_end);
 
         }
         // If contribution is a legal entity
-        else if ( $contribution_wrapper->field_cont_contributor->type->value() == 'legal_entity') {
+        else if ( $contribution->type == 'legal_entity') {
           // Set the type.
           $rights['contributions'][$contribution->nid]['type'] = 'legal_entity';
         }
