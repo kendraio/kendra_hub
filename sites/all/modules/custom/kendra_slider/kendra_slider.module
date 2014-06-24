@@ -14,7 +14,8 @@ function kendra_slider_field_widget_info() {
   return array(
     'range_slider' => array(
       'label' => t('Slider'),
-      'field types' => 'range_integer',
+      'field types' => array('range_integer'),
+      'settings' => array(),
     ),
   );
 }
@@ -23,10 +24,18 @@ function kendra_slider_field_widget_info() {
  * Implements hook_field_widget_form().
  */
 function kendra_slider_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  //dpm($instance);
   $element += array(
     '#type' => 'slider',
-    //TODO: pass range values
-    '#default_value' => isset($items[$delta]) ? $items[$delta] : 0,
+    '#default_value' => isset($items[$delta]) ? array('value' => $items[$delta]['from'],
+      'value2' => $items[$delta]['to']) :
+      array('value' => 0, 'value2' => 100),
+    '#range' => TRUE,
+  '#display_bubble' => TRUE,
+  '#display_bubble_format' => '%{value}%||%{value}%',
+  //'#display_inputs' => FALSE,
+  '#adjust_field_min' => "edit-field-cont-target-usage-und-{$delta}-value",
+  '#adjust_field_max' => "edit-field-cont-target-usage-und-{$delta}-value2",
   );
   return $element;
 }
