@@ -1,2 +1,32 @@
 <?php
 
+/**
+ * Implements hook_theme().
+ */
+//function kendra_slider_theme($existing, $type, $theme, $path) {
+//  return array();
+//}
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function kendra_slider_field_widget_info() {
+  return array(
+    'range_slider' => array(
+      'label' => t('Slider'),
+      'field types' => 'range_integer',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function kendra_slider_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $element += array(
+    '#type' => 'slider',
+    //TODO: pass range values
+    '#default_value' => isset($items[$delta]) ? $items[$delta] : 0,
+  );
+  return $element;
+}

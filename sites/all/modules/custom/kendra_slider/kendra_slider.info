@@ -1,3 +1,7 @@
 name = Kendra Slider
+description = Slider support for Range fields
 package = Kendra
 core = 7.x
+
+dependencies[] = range
+dependencies[] = sliderfield
