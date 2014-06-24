@@ -249,29 +249,46 @@ function kendra_wf_get_current_aggregated_rights_table() {
     $content['title'] = array(
       '#markup' => '<h2>Aggregated rights report</h2>',
     );
+    /* $content['charts'] = array(
+      '#prefix' => '<div class="row">',
+      '#suffix' => '</div>',
+    );
+    */
 
-    $content['rights'] = theme('rights_split', array(
+    $rights_chart = theme('rights_split', array(
+      'id' => 'rights-split-' . $nid,
       'title' => t('Rights split'),
       'rights' => array(
-        array('Composition', '50%'),
-        array('Performance', '50%'),
+        array('Composition', '50'),
+        array('Performance', '50'),
       ),
     ));
+    $content['charts']['rights'] = array(
+      //'#prefix' => '<div class="col-md-6">',
+      'chart' => $rights_chart,
+      //'#suffix' => '</div>',
+    );
 
     $splits = array();
     $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100);
     foreach ($resolved_asset_rights as $key => $legal_entity) {
       $splits[] = array(
-        'key' => $key,
-        'roles' => implode(', ', $legal_entity['roles']),
-        'share' => number_format($legal_entity['percentage'], 2) . '%',
+        $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
+        $legal_entity['percentage'],
       );
     }
 
-    $content['splits'] = theme('entities_split', array(
+    $entities_chart = theme('entities_split', array(
+      'id' => 'legal-entities-split-' . $nid,
       'title' => t('Legal entities split'),
       'splits' => $splits,
     ));
+
+    $content['charts']['entities'] = array(
+      //'#prefix' => '<div class="col-md-6">',
+      'chart' => $entities_chart,
+      //'#suffix' => '</div>',
+    );
 
   }
   return $content;
@@ -289,10 +306,27 @@ function kendra_wf_theme($existing, $type, $theme, $path) {
     'entities_split' => array(
       'variables' => array('splits' => array()),
     ),
+    'subclip_usage' => array(
+      'template' => 'subclip-usage',
+      'path' => $path . '/templates',
+      'variables' => array('start' => 0, 'end' => 100, 'nid' => 0),
+    ),
   );
 }
 
 function theme_rights_split($vars) {
+  $chart = array(
+    'id' => $vars['id'],
+    'type' => 'PieChart',
+    'rows' => $vars['rights'],
+    'width' => '700',
+    'height' => '400',
+  );
+  return array(
+    '#prefix' => '<h3>' . $vars['title'] . '</h3>',
+    '#markup' => d3_draw($chart),
+  );
+
   return array(
     '#theme' => 'table',
     '#prefix' => '<h3>' . $vars['title'] . '</h3>',
@@ -302,15 +336,25 @@ function theme_rights_split($vars) {
 }
 
 function theme_entities_split($vars) {
+  $chart = array(
+    'id' => $vars['id'],
+    'type' => 'PieChart',
+    'rows' => $vars['splits'],
+    'width' => '700',
+    'height' => '400',
+  );
   return array(
-    '#theme' => 'table',
     '#prefix' => '<h3>' . $vars['title'] . '</h3>',
-    '#header' => array(t('Legal entity'), t('Contributions'), t('Percent')),
-    '#rows' => $vars['splits'],
+    '#markup' => d3_draw($chart),
   );
 }
 
-
+function template_preprocess_subclip_usage(&$vars) {
+  $vars['edit_url'] = '';
+  $vars['subclip_style'] = 'margin: 0 '
+    . (100 - intval($vars['end'])) . '% 0 ' . intval($vars['start']) . '%;';
+  $vars['subclip'] = node_load($vars['nid']);
+}
 
 
 

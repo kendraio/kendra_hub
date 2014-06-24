@@ -1,3 +1,14 @@
 // customize bootstrap variables here:
 @import "variables";
 @import "bootstrap";
+
+.subclip-wrapper {
+  background-color: $gray-lighter;
+  margin-bottom: 0.5em;
+}
+.subclip-usage > a {
+  background-color: $brand-primary;
+  color: $gray-lighter;
+  padding-left: 0.5em;
+  display: block;
+}
