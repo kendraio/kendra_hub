@@ -33,7 +33,7 @@ function kendra_slider_field_widget_form(&$form, &$form_state, $field, $instance
     '#range' => TRUE,
   '#display_bubble' => TRUE,
   '#display_bubble_format' => '%{value}%||%{value}%',
-  //'#display_inputs' => FALSE,
+  '#display_inputs' => FALSE,
   '#adjust_field_min' => "edit-field-cont-target-usage-und-{$delta}-value",
   '#adjust_field_max' => "edit-field-cont-target-usage-und-{$delta}-value2",
   );
