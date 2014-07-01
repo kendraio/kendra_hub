@@ -1,0 +1,207 @@
+<?php
+
+/**
+ * @file
+ * Module file for the Admin Toggle module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function admin_toggle_menu() {
+  $items['admin/config/administration/admin_toggle'] = array(
+    'title' => 'Admin Toggle',
+    'description' => 'Modify Admin Toggle settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('admin_toggle_admin_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'admin_toggle.admin.inc',
+  );
+
+  $items['admin_toggle/toggle'] = array(
+    'title' => 'Admin Toggle',
+    'page callback' => 'admin_toggle_toggle',
+    'access arguments' => array('use admin toggle'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_init().
+ */
+function admin_toggle_init() {
+  if (user_access('use admin toggle')) {
+    $settings = array(
+      'adminToggle' => array(
+        'key' => variable_get('admin_toggle_key', '`'),
+        'selector' => admin_toggle_get_selector(),
+        'default' => admin_toggle_default(),
+      ),
+    );
+    drupal_add_js($settings, 'setting');
+    drupal_add_js(drupal_get_path('module', 'admin_toggle') . '/admin_toggle.js');
+    // If admin items should be hidden by default, hide them via CSS.
+    if (!admin_toggle_default()) {
+      drupal_add_css('
+        .action-links,
+        #admin-menu,
+        .admin-toggle {
+          display: none;
+        }
+      ', array('type' => 'inline'));
+    }
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function admin_toggle_permission() {
+  return array(
+    'use admin toggle' => array(
+      'title' => t('Use Admin Toggle'),
+      'description' => t('Use Admin Toggle functionality.'),
+    ),
+    'administer admin toggle' => array(
+      'title' => t('Administer Admin Toggle'),
+      'description' => t('Modify settings for Admin Toggle.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess_block().
+ */
+function admin_toggle_preprocess_block(&$vars) {
+  $block = $vars['block'];
+  if (
+    ($block->module == 'system' && $block->delta == 'management')
+    || $block->module == 'devel'
+  ) {
+    $vars['classes_array'][] = 'admin-toggle';
+  }
+}
+
+/**
+ * Implements hook_preprocess_toolbar().
+ */
+function admin_toggle_preprocess_toolbar(&$vars) {
+  $vars['classes_array'][] = 'admin-toggle';
+}
+
+/**
+ * Return the jQuery selector for admin elements to toggle.
+ *
+ * @return string
+ *   A comma-separated list of selectors, to be passed to the jQuery()
+ *   function.
+ */
+function admin_toggle_get_selector() {
+  // Build an array of selectors.
+  $selectors = array(
+    '.action-links',
+    '#admin-menu',
+    '.admin-toggle',
+    '.tabs.primary:has(a.admin-toggle-child)',
+  );
+
+  $custom = trim(variable_get('admin_toggle_custom_selector'));
+  if (!empty($custom)) {
+    $selectors[] = $custom;
+  }
+  return implode(',', $selectors);
+}
+
+/**
+ * Menu callback; toggle the user's show/hide preference.
+ */
+function admin_toggle_toggle() {
+  if (isset($_POST['admin_toggle'])) {
+    $_SESSION['admin_toggle'] = (integer) $_POST['admin_toggle'];
+  }
+}
+
+/**
+ * Get the default toggle state.
+ *
+ * This is done by checking for the session variable first. If it isn't set,
+ * the setting from the admin configuration form is used.
+ *
+ * @return integer
+ *   Either 0 or 1, where 0 represents admin elements toggled off and 1
+ *   represents admin elements toggled on.
+ */
+function admin_toggle_default() {
+  if (isset($_SESSION['admin_toggle'])) {
+    return ($_SESSION['admin_toggle']);
+  }
+
+  return variable_get('admin_toggle_default', 1);
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function admin_toggle_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  global $user;
+
+  // Get permissions for the anonymous user. (Role ID 1 is anonymous.)
+  $perms = user_role_permissions(array(1 => NULL));
+
+  // We're going to do a terrible, terrible thing. We're going to temporarily
+  // overwrite the global $user object, so that any access checks run by menu
+  // access callbacks will think they're dealing with an anonymous user. Then,
+  // we'll set the global $user object back to its original self.
+  $orig_user = clone $user;
+  $user = new stdClass();
+  $user->uid = 0;
+  $user->hostname = '::1';
+  $user->roles = array(1 => 'anonymous user');
+  $user->cache = 0;
+
+  // Iterate through each of the tabs, adding the 'admin-toggle-child' class to
+  // those which the anonymous user does not have access.
+  foreach ($data['tabs'] as &$tabs) {
+    if ($tabs['count']) {
+      $i = 0;
+      foreach ($tabs['output'] as &$tab) {
+        // We need to check user access for this menu item. We do this by
+        // creating a "map" out of the menu path's parts, and passing the menu
+        // item along with the map to _menu_check_access().
+        // @see _menu_translate(), _menu_check_access()
+        $item = $tab['#link'];
+        if (substr($item['path'], 0, 5) == 'user/' || substr($item['path'], 0, 6) == 'admin/') {
+          // Since we're dealing with an anonymous user, viewing
+          // profile-related pages or certain admin pages triggers a bunch of
+          // PHP warnings when _menu_translate() is run. As an anonymous user
+          // has no profile and can presumably never access admin pages anyway,
+          // simply set access to FALSE.
+          $item['access'] = FALSE;
+        }
+        else {
+          $map = _menu_translate($item, explode('/', $tab['#link']['path']));
+          _menu_check_access($item, $map);
+        }
+
+        // If an anonymous user would not have access to this item, increment
+        // $i.
+        if (!$item['access']) {
+          $i++;
+
+          // If we've reached the last item and all of the items are not
+          // anonymously accessible, add the 'admin-toggle-child' class to the
+          // last link. This will indicate to the JavaScript that its parent
+          // can be hidden.
+          if ($i == $tabs['count']) {
+            $tab['#link']['localized_options']['attributes'] = array('class' => array('admin-toggle-child'));
+          }
+        }
+      }
+    }
+  }
+
+  // Set the $user object back to its original self.
+  $user = $orig_user;
+}

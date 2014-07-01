@@ -1,0 +1,12 @@
+name = Admin Toggle
+description = Provides functionality for hiding all administration markup on a page with the tap of a button.
+core = 7.x
+package = Administration
+configure = admin/config/administration/admin_toggle
+
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "admin_toggle"
+datestamp = "1380552879"
+
