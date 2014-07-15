@@ -34,7 +34,7 @@ function kendra_slider_field_widget_form(&$form, &$form_state, $field, $instance
   '#display_bubble' => TRUE,
   '#display_bubble_format' => '%{value}%||%{value}%',
   '#element_validate' => array('_kendra_slider_range_validate'),
-  //'#display_inputs' => FALSE,
+  '#display_inputs' => FALSE,
   );
   return array('value' => $element);
 
