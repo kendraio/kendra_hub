@@ -166,8 +166,10 @@ function kendra_wf_form_views_exposed_form_alter(&$form, &$form_state) {
       drupal_set_message('You have no target sample selected');
       return;
     }
-
-    $form['sample'] = array(
+    $form['sample_grp'] = array(
+      '#type' => 'fieldset',
+    );
+    $form['sample_grp']['sample'] = array(
        '#type' => 'submit',
        '#value' => t('Sample'),
        '#submit' => array('kendra_wf_sample_asset_form_submit'),
