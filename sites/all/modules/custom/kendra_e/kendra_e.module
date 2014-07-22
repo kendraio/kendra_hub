@@ -211,7 +211,7 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
   // This is a rough check as some assets  may be called more then once we will
   // use a high number that will represent a recursive call.
   if ($nid_stack[$asset->nid] > 10) {
-    drupal_set_message('Recursive relation to an asset encountered – Can not complete page calculations: some data will be missing and or incorrect', 'error', FALSE);
+    drupal_set_message('Recursive relation to an asset encountered – Can not complete page calculations: some data may be missing and or incorrect.', 'error', FALSE);
     return;
   }
 
