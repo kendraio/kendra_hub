@@ -196,6 +196,26 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
  */
 function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
 
+  // Hold an array of nids so we can catch recursive relations.
+  $nid_stack = &drupal_static('_kendra_e_collect_asset_rights_nid_stack');
+  if (!isset($nid_stack)) {
+      $nid_stack = array();
+  }
+  // Add the nid to the stack.
+  if (isset($nid_stack[$asset->nid])) {
+    $nid_stack[$asset->nid] += 1;
+  }
+  else {
+    $nid_stack[$asset->nid] = 1;
+  }
+  // This is a rough check as some assets  may be called more then once we will
+  // use a high number that will represent a recursive call.
+  if ($nid_stack[$asset->nid] > 10) {
+    drupal_set_message('Recursive relation to an asset encountered – Cant complete page calculations: some data will be missing and or incorrect', 'error', FALSE);
+    return;
+  }
+
+
    $asset_wrapper = entity_metadata_wrapper('node', $asset);
    // Get all contributions within start end.
    $contributions = kendra_e_get_partial_asset_contributions($asset_wrapper, NULL ,$start, $end);
