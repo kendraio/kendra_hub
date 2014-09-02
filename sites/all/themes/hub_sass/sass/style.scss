@@ -129,13 +129,17 @@ $bs-height-xs:   (floor($font-size-small * 1.2) + $padding-small-vertical + 1);
 .btn-yahoo         { @include btn-social(#720e9e); }
 
 
-.view-asset-contributions .views-exposed-form .views-exposed-widget {
+.view-asset-contributions .views-exposed-widget.views-submit-button {
     float: left;
     padding: 0.5em 1em 0 0;
     width: 100%;
 }
 
-form-type-textfield.form-item-range-value2.form-item.form-group {
+.form-type-textfield.form-item-range-value2.form-item.form-group {
     float: right;
     width: 32px;
+}
+
+.views-exposed-widget.views-widget-filter-field_cont_target_usage_from {
+    float: right;
 }

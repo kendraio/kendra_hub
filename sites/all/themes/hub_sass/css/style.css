@@ -8674,14 +8674,19 @@ button.close {
 }
 
 /* line 132, ../sass/style.scss */
-.view-asset-contributions .views-exposed-form .views-exposed-widget {
+.view-asset-contributions .views-exposed-widget.views-submit-button {
   float: left;
   padding: 0.5em 1em 0 0;
   width: 100%;
 }
 
 /* line 138, ../sass/style.scss */
-form-type-textfield.form-item-range-value2.form-item.form-group {
+.form-type-textfield.form-item-range-value2.form-item.form-group {
   float: right;
   width: 32px;
+}
+
+/* line 143, ../sass/style.scss */
+.views-exposed-widget.views-widget-filter-field_cont_target_usage_from {
+  float: right;
 }
