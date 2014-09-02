@@ -127,3 +127,10 @@ $bs-height-xs:   (floor($font-size-small * 1.2) + $padding-small-vertical + 1);
 .btn-vimeo         { @include btn-social(#1ab7ea); }
 .btn-vk            { @include btn-social(#587ea3); }
 .btn-yahoo         { @include btn-social(#720e9e); }
+
+
+.view-asset-contributions .views-exposed-form .views-exposed-widget {
+    float: left;
+    padding: 0.5em 1em 0 0;
+    width: 100%;
+}

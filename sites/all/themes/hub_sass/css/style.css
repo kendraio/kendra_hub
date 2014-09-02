@@ -8672,3 +8672,10 @@ button.close {
   color: #720e9e;
   background-color: white;
 }
+
+/* line 132, ../sass/style.scss */
+.view-asset-contributions .views-exposed-form .views-exposed-widget {
+  float: left;
+  padding: 0.5em 1em 0 0;
+  width: 100%;
+}
