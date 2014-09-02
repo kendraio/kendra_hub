@@ -8679,3 +8679,9 @@ button.close {
   padding: 0.5em 1em 0 0;
   width: 100%;
 }
+
+/* line 138, ../sass/style.scss */
+form-type-textfield.form-item-range-value2.form-item.form-group {
+  float: right;
+  width: 32px;
+}
