@@ -85,6 +85,7 @@ function kendra_slider_form_views_exposed_form_alter(&$form, &$form_state) {
       '#max' => 100,
       '#step' => 1,
       '#display_inputs' => FALSE,
+          '#display_bubble' => TRUE,
       //'#size' => 300,
     );
     $form['field_cont_target_usage_to']['#access'] = FALSE;
