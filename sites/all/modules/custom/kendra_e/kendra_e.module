@@ -238,26 +238,29 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
           continue;
         }
 
-        $rights['contributions'][$contribution->nid]['name'] = $contribution->title;
-        $rights['contributions'][$contribution->nid]['role'] = $contribution_role->name;
+        $contribution_a = array();
+        $contribution_a['name'] = $contribution->title;
+        $contribution_a['role'] = $contribution_role->name;
+        $contribution_a['nid'] = $contribution->nid;
         // @todo - we need to add righ type support.
         $points = $combined_target_usage * $usage_weight;
-        $rights['contributions'][$contribution->nid]['points'] = $points;
+        $contribution_a['points'] = $points;
         // If an contributions comes from an asset?
         if ( $contribution->type == 'asset') {
           // Set the type.
-          $rights['contributions'][$contribution->nid]['type'] = 'asset';
+          $contribution_a['type'] = 'asset';
           $sub_asset = $contribution;
           $sub_start = $contribution_wrapper->field_cont_source_usage->from->value();
           $sub_end = $contribution_wrapper->field_cont_source_usage->to->value();
-          _kendra_e_collect_asset_rights($rights['contributions'][$contribution->nid], $sub_asset, $sub_start, $sub_end);
+          _kendra_e_collect_asset_rights($contribution_a, $sub_asset, $sub_start, $sub_end);
 
         }
         // If contribution is a legal entity
         else if ( $contribution->type == 'legal_entity') {
           // Set the type.
-          $rights['contributions'][$contribution->nid]['type'] = 'legal_entity';
+          $contribution_a['type'] = 'legal_entity';
         }
+        $rights['contributions'][] = $contribution_a;
       }
     }
 
