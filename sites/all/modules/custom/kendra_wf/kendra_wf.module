@@ -8,13 +8,24 @@
 /**
  * Called from a views PHP field
  */
-function kendra_wf_calc_points_value($nid, &$static) {
+function kendra_wf_calc_points_value($nid, &$static, $start_p=0, $end_p=100) {
   //drupal_set_message($nid);
   $node = node_load($nid);
   $node_wrapper = entity_metadata_wrapper('node', $node);
 
   // Get the total usage (target usage).
   $target_usage = $node_wrapper->field_cont_target_usage->value();
+
+  // Reduce start and end points so they are within the provided once.
+  foreach ($target_usage as &$value) {
+    if ($value['from'] < $start_p) {
+      $value['from'] = $start_p;
+    }
+    if ($value['to'] > $end_p) {
+      $value['to'] = $end_p;
+    }
+  }
+
   $total_usage = _kendra_wf_calc_usage_value($target_usage);
   // Usage weight.
   $usage_weight = $node_wrapper->field_cont_usage_weight->value();
