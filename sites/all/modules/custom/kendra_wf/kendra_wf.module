@@ -283,7 +283,13 @@ function kendra_wf_get_current_aggregated_rights_table() {
     );
 
     $splits = array();
-    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100);
+    // @todo - replace with UI defined values.
+    $rt_split = array (
+	'Composition' => 33,
+	'Performance' => 33,
+	'Recording' => 33,
+    );
+    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100, $rt_split);
     foreach ($resolved_asset_rights as $key => $legal_entity) {
       $splits[] = array(
         $key . ' (' . implode(', ', $legal_entity['roles']) . ')',

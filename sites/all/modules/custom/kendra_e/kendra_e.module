@@ -125,8 +125,13 @@ function kendra_e_resolve_asset($asset) {
 
 /**
  * Resolve the legal entities and their rights percentages.
+ *
+ * $asset - The parent aasset
+ * $start, $end - 0 to 100 for the full asset
+ * $rt_split (right type split) an array in the format of:
+ *   Array( [right type] => percent 0-100 }
  */
-function kendra_e_resolve_asset_rights($asset, $start, $end) {
+function kendra_e_resolve_asset_rights($asset, $start, $end, $rt_split) {
 
   // The array to hold the resolved asset rights data.
   $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
@@ -134,23 +139,21 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
       $resolved_asset_rights = array();
   }
 
-  // Collect an array to hold rights information.
+  // 1. Collect an array to hold rights information.
   // Builds the rights array with the following format:
   // ['contributions'][nid]
   // ['contributions'][nid]['name']
   // ['contributions'][nid]['type'] asset / legal_entity
   // ['contributions'][nid]['contributions']
   // ['contributions'][nid]['role']
-  // @todo We are currently not differentiating between right types - so
-  // collected data and calculations need to take that into consideration.
+  // ['contributions'][nid]['right_type']
   $rights = array();
   // Cpllect all the rights information.
   // This step collects the details from the database. All other functions
   // work on the extracted data.
   _kendra_e_collect_asset_rights($rights, $asset, $start, $end);
 
-
-  // Collect the percentage from the collected rights array.
+  // 2. Collect the percentage from the collected rights array.
   // Adds to rights array:
   // ['contributions'][nid]['percentage']
   if (isset($rights['contributions'])) {
@@ -158,17 +161,18 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
     _kendra_e_calc_asset_rights_percentage($rights['contributions']);
   }
 
-  // Build a list of legal entities and their contribution percentages.
+
+  // 3. Build a list of legal entities and their contribution percentages.
   // Format:
   // $resolved_asset_rights[name]
   // $resolved_asset_rights[name]['roles'][role] = role
   // $resolved_asset_rights[name]['contributions']
   if (isset($rights['contributions'])) {
-    _kendra_e_resolve_asset_rights_percentage($rights['contributions']);
+    _kendra_e_resolve_asset_rights_percentage($rights['contributions'], 100, $rt_split);
   }
 
 
-  // Total each of the artists aggregated rights percentages.
+  // 4. Total each of the artists aggregated rights percentages.
   // Adds
   // $resolved_asset_rights[name]['percentage']
   foreach ($resolved_asset_rights as $artist_name => &$artist) {
@@ -190,11 +194,14 @@ function kendra_e_resolve_asset_rights($asset, $start, $end) {
 
 /**
  *
- * Resolve the rights of a clip - to be called recessively.
+ * Step 1 - Resolve the rights of a clip - to be called recessively.
  *
  * The call for Under pressure will be: kendra_e_resolve_asset({obj}, 0 , 100);
+ *
+ * $right_type - if null add all right types else add only contributions of the
+ * specified right type
  */
-function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
+function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end, $right_type = NULL) {
 
   // Hold an array of nids so we can catch recursive relations.
   $nid_stack = &drupal_static('_kendra_e_collect_asset_rights_nid_stack');
@@ -237,45 +244,60 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end) {
           // If any are not set we will ignore the record.
           continue;
         }
+        // Get the right type.
+        $contribution_right_type = $contribution_wrapper->field_cont_t_role->field_t_right_type->value();
+        // Limit contribution_ to the type if specified.
+        if (is_null($right_type) || ($right_type == $contribution_right_type->name) ) {
+          $contribution_a = array();
+          $contribution_a['name'] = $contribution->title;
+          $contribution_a['role'] = $contribution_role->name;
+          $contribution_a['right_type'] = $contribution_right_type->name;
+          $contribution_a['nid'] = $contribution->nid;
+          // @todo - we need to add righ type support.
+          $points = $combined_target_usage * $usage_weight;
+          $contribution_a['points'] = $points;
+          // If an contributions comes from an asset?
+          if ( $contribution->type == 'asset') {
+            // Set the type.
+            $contribution_a['type'] = 'asset';
+            $sub_asset = $contribution;
+            $sub_start = $contribution_wrapper->field_cont_source_usage->from->value();
+            $sub_end = $contribution_wrapper->field_cont_source_usage->to->value();
+            // Collect child contributions for the parent right type.
+            _kendra_e_collect_asset_rights($contribution_a, $sub_asset, $sub_start, $sub_end, $contribution_right_type->name);
 
-        $contribution_a = array();
-        $contribution_a['name'] = $contribution->title;
-        $contribution_a['role'] = $contribution_role->name;
-        $contribution_a['nid'] = $contribution->nid;
-        // @todo - we need to add righ type support.
-        $points = $combined_target_usage * $usage_weight;
-        $contribution_a['points'] = $points;
-        // If an contributions comes from an asset?
-        if ( $contribution->type == 'asset') {
-          // Set the type.
-          $contribution_a['type'] = 'asset';
-          $sub_asset = $contribution;
-          $sub_start = $contribution_wrapper->field_cont_source_usage->from->value();
-          $sub_end = $contribution_wrapper->field_cont_source_usage->to->value();
-          _kendra_e_collect_asset_rights($contribution_a, $sub_asset, $sub_start, $sub_end);
-
+          }
+          // If contribution is a legal entity
+          else if ( $contribution->type == 'legal_entity') {
+            // Set the type.
+            $contribution_a['type'] = 'legal_entity';
+          }
+          $rights['contributions'][] = $contribution_a;
         }
-        // If contribution is a legal entity
-        else if ( $contribution->type == 'legal_entity') {
-          // Set the type.
-          $contribution_a['type'] = 'legal_entity';
-        }
-        $rights['contributions'][] = $contribution_a;
       }
     }
 
 }
 
-
+/**
+ * Step 2 - Collect the percentage from the collected rights array.
+ */
 function _kendra_e_calc_asset_rights_percentage(&$contributions) {
-  // Calcolate the totle points.
-  $total_points = 0;
+  // Calcolate the totle points by right type.
+  $total_points = array();
   foreach ($contributions as $contribution) {
-    $total_points = $total_points +  $contribution['points'];
+    $rt = $contribution['right_type'];
+    if (isset($total_points[$rt])) {
+      $total_points[$rt] +=  $contribution['points'];
+    }
+    else {
+      $total_points[$rt] = $contribution['points'];
+    }
   }
   // Calcolate the percentage.
   foreach ($contributions as &$contribution) {
-    $percentage =  $contribution['points'] / $total_points * 100;
+    $rt = $contribution['right_type'];
+    $percentage =  $contribution['points'] / $total_points[$rt] * 100;
     $contribution['percentage'] = $percentage;
     //drupal_set_message('$percentage = ' . $percentage);
   }
@@ -289,6 +311,8 @@ function _kendra_e_calc_asset_rights_percentage(&$contributions) {
 }
 
 /**
+ * Step 3. Build a list of legal entities and their contribution percentages.
+ *
  * Resolve all the aggregated rights percentages.
  *
  * $contributions - the collections of contributions (can contain sub
@@ -297,7 +321,7 @@ function _kendra_e_calc_asset_rights_percentage(&$contributions) {
  * $share - The percent of of the total 100% the contributions share. defaults
  * to 100%
  */
-function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100) {
+function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100, $rt_split) {
   // The array to hold the resolved asset rights data.
   $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
   if (!isset($resolved_asset_rights)) {
@@ -308,14 +332,16 @@ function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100)
     if ($contribution['type'] == 'legal_entity') {
       $name = $contribution['name'];
       $role = $contribution['role'];
+      $right_type = $contribution['right_type'];
       // Add the role to the user.
       $resolved_asset_rights[$name]['roles'][$role] = $role;
       // Caloclate the contribution percentage.
-      $resolved_asset_rights[$name]['contributions'][] = $contribution['percentage'] * $share / 100;
+      $share_percentage = $contribution['percentage'] * $share / 100;
+      $resolved_asset_rights[$name]['contributions'][] = $contribution['percentage'] * $share / 100  * $rt_split[$right_type] /100 ;
     }
     else if ($contribution['type'] == 'asset') {
       if (isset($contribution['contributions'])) {
-        _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage'] * $share / 100);
+        _kendra_e_resolve_asset_rights_percentage($contribution['contributions'],  $contribution['percentage'] * $share / 100, $rt_split);
       }
     }
   }
