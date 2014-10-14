@@ -110,11 +110,7 @@ function kendra_e_resolve_asset($asset) {
       // If contribution is an asset.
       elseif ( $contribution_wrapper->field_cont_contributor->type->value() == 'asset') {
         $child_asset = $contribution_wrapper->field_cont_contributor->value();
-        // @todo - debuging.
-        //drupal_set_message(print_r($child_asset, TRUE));
         kendra_e_resolve_asset($child_asset);
-//        $child_asset_wrapper = entity_metadata_wrapper('node', $child_asset);
-//        kendra_e_get_asset_contributions($child_asset_wrapper);
       }
 
 
@@ -131,7 +127,7 @@ function kendra_e_resolve_asset($asset) {
  * $rt_split (right type split) an array in the format of:
  *   Array( [right type] => percent 0-100 }
  */
-function kendra_e_resolve_asset_rights($asset, $start, $end, $rt_split) {
+function kendra_e_resolve_asset_rights($asset, $start, $end, &$rt_split) {
 
   // The array to hold the resolved asset rights data.
   $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
@@ -161,6 +157,8 @@ function kendra_e_resolve_asset_rights($asset, $start, $end, $rt_split) {
     _kendra_e_calc_asset_rights_percentage($rights['contributions']);
   }
 
+  // Validate the rights split
+  _kendra_e_validate_rights_split($rights['contributions'], $rt_split);
 
   // 3. Build a list of legal entities and their contribution percentages.
   // Format:
@@ -183,9 +181,6 @@ function kendra_e_resolve_asset_rights($asset, $start, $end, $rt_split) {
     $artist['percentage'] =$total ;
   }
 
-// Debug.
-//  print_r($rights);
-//  drupal_set_message(print_r($resolved_asset_rights,TRUE));
 
   return $resolved_asset_rights;
 }
@@ -308,6 +303,40 @@ function _kendra_e_calc_asset_rights_percentage(&$contributions) {
       _kendra_e_calc_asset_rights_percentage($c['contributions']);
     }
   }
+}
+
+/**
+ * Remove unused right types from the split data.
+ *
+ * Remove any unused right types from the split data and adjust the others
+ * proportionally so they total 100%.
+ * Missing right types that are in use will be set to zero.
+ */
+function _kendra_e_validate_rights_split($contributions, &$rt_split) {
+  $used_split = array();
+  // Colect used right types.
+  foreach ($contributions as $value) {
+    $rt = $value['right_type'];
+    if (!isset($used_split[$rt])) {
+      $used_split[$rt] = $rt;
+    }
+  }
+  // Remove unused rights
+  foreach ($rt_split as $key => $value) {
+    if (!isset($used_split[$key])) {
+      unset($rt_split[$key]);
+    }
+  }
+  // Adjust to 100%
+  $temp_total = array_sum($rt_split);
+   foreach ($rt_split as $key => $value) {
+     $rt_split[$key] = $value / $temp_total * 100;
+   }
+  // Add missing rights as zero %
+  // todo - Add missing rights as zero %
+
+  //$rt_split = array_intersect($rt_split, $used_split);
+  //print_r($rt_split);
 }
 
 /**

@@ -259,56 +259,114 @@ function kendra_wf_get_current_aggregated_rights_table() {
   $nid = arg(1);
   $asset = node_load($nid);
   if ($asset->type == 'asset') {
-    $content['title'] = array(
-      '#markup' => '<h2>Aggregated rights report</h2>',
-    );
-    /* $content['charts'] = array(
-      '#prefix' => '<div class="row">',
-      '#suffix' => '</div>',
-    );
-    */
 
-    $rights_chart = theme('rights_split', array(
-      'id' => 'rights-split-' . $nid,
-      'title' => t('Rights split'),
-      'rights' => array(
-        array('Composition', '50'),
-        array('Performance', '50'),
-      ),
-    ));
-    $content['charts']['rights'] = array(
-      //'#prefix' => '<div class="col-md-6">',
-      'chart' => $rights_chart,
-      //'#suffix' => '</div>',
-    );
-
-    $splits = array();
     // @todo - replace with UI defined values.
     $rt_split = array (
-	'Composition' => 33,
-	'Performance' => 33,
-	'Recording' => 33,
+	'Composition' => 40,
+	'Performance' => 50,
+	'Recording' => 10,
     );
+
+    // Build the chart for the requested rights split chart.
+    $right_type_chart = Array (
+      'id' => 'rights-split-requested' . $nid,
+      'title' => t('Requested Rights split'),
+      'rights' => array(),
+    );
+    foreach ($rt_split as $key => $value) {
+      $right_type_chart['rights'][] = array($key, $value);
+    }
+    $requested_rights_chart = theme('rights_split', $right_type_chart);
+
+
+    // Resolve the rights for the asset.
+    // This will return an array with the rights information and if needed will
+    // Adjust the $rt_split.
     $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100, $rt_split);
+
+
+    // Actual Rights split Chart (if not adjusted will be the same as requested).
+    $right_type_chart = Array (
+      'id' => 'rights-split-actual' . $nid,
+      'title' => t('Actual Rights split'),
+      'rights' => array(),
+    );
+    foreach ($rt_split as $key => $value) {
+      $right_type_chart['rights'][] = array($key, $value);
+    }
+    $actual_rights_chart = theme('rights_split', $right_type_chart);
+
+    // build the rights Graph & table
+    $splits = array();
+    $header = array('Artist', 'Contribution', 'Percent');
+    $rows = array();
     foreach ($resolved_asset_rights as $key => $legal_entity) {
+      // Graph.
       $splits[] = array(
         $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
         $legal_entity['percentage'],
       );
+      // Table.
+      $rows[] = array(
+          'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
+          'class' => array('split-row'),
+          );
     }
 
+    // Theme the chart
     $entities_chart = theme('entities_split', array(
       'id' => 'legal-entities-split-' . $nid,
       'title' => t('Legal entities split'),
       'splits' => $splits,
     ));
+    // Theme the table
+    $entities_table =  theme('table', array('header' => $header,'rows' => $rows, 'attributes' => array('class' => array('checkout-review'))));
 
-    $content['charts']['entities'] = array(
-      //'#prefix' => '<div class="col-md-6">',
-      'chart' => $entities_chart,
-      //'#suffix' => '</div>',
+
+    // Put it all together.
+    
+    // The Title.
+    $content['title'] = array(
+      '#prefix' => '<div class="rights-report-title">',
+      '#markup' => '<h2>Aggregated rights report</h2>',
+      '#suffix' => '</div>',
     );
-
+    // The rights split
+    $content['rights_split'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Rights split'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+    );
+    $content['rights_split']['requested_rights'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $requested_rights_chart,
+      '#suffix' => '</div>',
+    );
+    $content['rights_split']['actual_rights'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $actual_rights_chart,
+      '#suffix' => '</div>',
+    );
+    // Combined Split chart and table.
+    $content['all_types'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Combined rights types'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+    );
+    // The chart
+    $content['all_types']['entities_chart'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $entities_chart,
+      '#suffix' => '</div>',
+    );
+    // The table.
+    $content['all_types']['entities_table'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      '#markup' =>  $entities_table,
+      '#suffix' => '</div>',
+    );
   }
   return $content;
 }
