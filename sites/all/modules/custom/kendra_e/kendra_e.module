@@ -144,7 +144,7 @@ function kendra_e_resolve_asset_rights($asset, $start, $end, &$rt_split) {
   // ['contributions'][nid]['role']
   // ['contributions'][nid]['right_type']
   $rights = array();
-  // Cpllect all the rights information.
+  // Collect all the rights information.
   // This step collects the details from the database. All other functions
   // work on the extracted data.
   _kendra_e_collect_asset_rights($rights, $asset, $start, $end);
@@ -248,10 +248,9 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end, $right_t
           $contribution_a['role'] = $contribution_role->name;
           $contribution_a['right_type'] = $contribution_right_type->name;
           $contribution_a['nid'] = $contribution->nid;
-          // @todo - we need to add righ type support.
           $points = $combined_target_usage * $usage_weight;
           $contribution_a['points'] = $points;
-          // If an contributions comes from an asset?
+          // If a contributions comes from an asset.
           if ( $contribution->type == 'asset') {
             // Set the type.
             $contribution_a['type'] = 'asset';
@@ -271,7 +270,6 @@ function _kendra_e_collect_asset_rights(&$rights, $asset, $start, $end, $right_t
         }
       }
     }
-
 }
 
 /**
@@ -333,10 +331,11 @@ function _kendra_e_validate_rights_split($contributions, &$rt_split) {
      $rt_split[$key] = $value / $temp_total * 100;
    }
   // Add missing rights as zero %
-  // todo - Add missing rights as zero %
-
-  //$rt_split = array_intersect($rt_split, $used_split);
-  //print_r($rt_split);
+  foreach ($used_split as $value) {
+    if (!isset($rt_split[$value])) {
+      $rt_split[$value] = 0;
+    }
+  }
 }
 
 /**

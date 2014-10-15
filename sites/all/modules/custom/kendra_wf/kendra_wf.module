@@ -324,7 +324,7 @@ function kendra_wf_get_current_aggregated_rights_table() {
 
 
     // Put it all together.
-    
+
     // The Title.
     $content['title'] = array(
       '#prefix' => '<div class="rights-report-title">',
