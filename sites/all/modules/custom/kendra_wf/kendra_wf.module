@@ -350,7 +350,7 @@ function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
         '#title' => t('Rights split'),
         '#options' => array(
           'Composition=40,Performance=50,Recording=10' => t('UK Radio'),
-          'Composition=45,Performance=50,Recording=5' => t('UK Radio'),
+          'Composition=45,Performance=50,Recording=5' => t('US Radio'),
           'Composition=30,Performance=65,Recording=5' => t('FR TV'),
           'Composition=50,Performance=40,Recording=10' => t('DE TV'),
         ),
