@@ -262,6 +262,24 @@ function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
   if ($asset->type == 'asset') {
 
     $qp = drupal_get_query_parameters();
+
+    if (isset($qp['range'])) {
+      // If we have a range in the url use it
+      $range = array (
+        'start' => $qp['range']['value'],
+        'end' => $qp['range']['value2'],
+      );
+      // Remove the range used on the sample page.
+      unset($qp['range']);
+    }
+    else {
+      // Set the range to the complete asset.
+      $range = array (
+        'start' => 0,
+        'end' => 100,
+      );
+    }
+
     if (empty($qp)) {
       // Default.
       $rt_split = array (
@@ -293,7 +311,7 @@ function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
     // Resolve the rights for the asset.
     // This will return an array with the rights information and if needed will
     // Adjust the $rt_split.
-    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100, $rt_split);
+    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, $range['start'], $range['end'], $rt_split);
     //print_r($resolved_asset_rights);
 
 
@@ -312,19 +330,20 @@ function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
     $splits = array();
     $header = array('Artist', 'Contribution', 'Percent');
     $rows = array();
-    foreach ($resolved_asset_rights['combined'] as $key => $legal_entity) {
-      // Graph.
-      $splits[] = array(
-        $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
-        $legal_entity['percentage'],
-      );
-      // Table.
-      $rows[] = array(
-          'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
-          'class' => array('split-row'),
-          );
+    if (isset($resolved_asset_rights['combined'])) {
+      foreach ($resolved_asset_rights['combined'] as $key => $legal_entity) {
+        // Graph.
+        $splits[] = array(
+          $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
+          $legal_entity['percentage'],
+        );
+        // Table.
+        $rows[] = array(
+            'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
+            'class' => array('split-row'),
+            );
+      }
     }
-
     // Theme the chart
     $entities_chart = theme('entities_split', array(
       'id' => 'legal-entities-split-' . $nid,

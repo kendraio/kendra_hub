@@ -149,13 +149,16 @@ function kendra_e_resolve_asset_rights($asset, $start, $end, &$rt_split) {
   // work on the extracted data.
   _kendra_e_collect_asset_rights($rights, $asset, $start, $end);
 
+
+  if (!isset($rights['contributions'])) {
+    return array();
+  }
+
   // 2. Collect the percentage from the collected rights array.
   // Adds to rights array:
   // ['contributions'][nid]['percentage']
-  if (isset($rights['contributions'])) {
-    // Calcolate percentages.
-    _kendra_e_calc_asset_rights_percentage($rights['contributions']);
-  }
+  // Calcolate percentages.
+  _kendra_e_calc_asset_rights_percentage($rights['contributions']);
 
   // Validate the rights split
   _kendra_e_validate_rights_split($rights['contributions'], $rt_split);
