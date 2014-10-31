@@ -559,6 +559,11 @@ function kendra_wf_get_current_aggregated_rights_table_submit($form, &$form_stat
         $item = explode('=', $value);
          $query[$item[0]]= $item[1];
       }
+      // Add the range if sppecified (used by views exposed filter).
+      $qp = drupal_get_query_parameters();
+      if (isset($qp['range'])) {
+        $query['range']= $qp['range'];
+      }
       $options = array('query' => $query);
       // Call the page with the new query parameters.
       drupal_goto($path, $options);
