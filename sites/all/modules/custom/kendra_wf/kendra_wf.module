@@ -426,56 +426,57 @@ function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
     );
   }
 
-  // @todo - needs more testing - so comenting out for now
 
-//  // Finaly we need to create one chart per ryte type
-//  foreach ($resolved_asset_rights['type'] as $right_type => $contributions) {
-//    $splits = array();
-//    $rows = array();
-//    foreach ($contributions as $key => $legal_entity) {
-//      // Graph.
-//      $splits[] = array(
-//        $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
-//        $legal_entity['percentage'],
-//      );
-//      // Table.
-//      $rows[] = array(
-//          'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
-//          'class' => array('split-row'),
-//          );
-//
-//    }
-//    // Theme the chart
-//    $entities_chart = theme('entities_split', array(
-//      'id' => 'legal-entities-split-' .$resolved_asset_rights . '-' . $nid,
-//      'title' => t('Legal entities split'),
-//      'splits' => $splits,
-//    ));
-//    // Theme the table
-//    $entities_table =  theme('table', array('header' => $header,'rows' => $rows, 'attributes' => array('class' => array( $resolved_asset_rights . '-rights-table'))));
-//
-//    // Combined Split chart and table.
-//    $form[$right_type] = array(
-//      '#type' => 'fieldset',
-//      '#title' => t($right_type),
-//      '#collapsible' => FALSE,
-//      '#collapsed' => FALSE,
-//    );
-//    // The chart
-//    $form[$right_type]['entities_chart'] = array(
-//      '#prefix' => '<div class="col-md-6">',
-//      'chart' => $entities_chart,
-//      '#suffix' => '</div>',
-//    );
-//    // The table.
-//    $form[$right_type]['entities_table'] = array(
-//      '#prefix' => '<div class="col-md-6">',
-//      '#markup' =>  $entities_table,
-//      '#suffix' => '</div>',
-//    );
-//
-//
-//  }
+
+  // Finaly we need to create one chart per ryte type.
+  if (isset($resolved_asset_rights['type'])) {
+    foreach ($resolved_asset_rights['type'] as $right_type => $contributions) {
+      $splits = array();
+      $rows = array();
+      foreach ($contributions as $key => $legal_entity) {
+        // Graph.
+        $splits[] = array(
+          $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
+          $legal_entity['percentage'],
+        );
+        // Table.
+        $rows[] = array(
+            'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
+            'class' => array('split-row'),
+            );
+
+      }
+      // Theme the chart
+      $entities_chart = theme('entities_split', array(
+        'id' => 'legal-entities-split-' .$right_type . '-' . $nid,
+        'title' => t('Legal entities split'),
+        'splits' => $splits,
+      ));
+      // Theme the table
+      $entities_table =  theme('table', array('header' => $header,'rows' => $rows, 'attributes' => array('class' => array( $right_type . '-rights-table'))));
+
+      // Combined Split chart and table.
+      $form[$right_type] = array(
+        '#type' => 'fieldset',
+        '#title' => t($right_type),
+        '#collapsible' => FALSE,
+        '#collapsed' => FALSE,
+      );
+      // The chart
+      $form[$right_type]['entities_chart'] = array(
+        '#prefix' => '<div class="col-md-6">',
+        'chart' => $entities_chart,
+        '#suffix' => '</div>',
+      );
+      // The table.
+      $form[$right_type]['entities_table'] = array(
+        '#prefix' => '<div class="col-md-6">',
+        '#markup' =>  $entities_table,
+        '#suffix' => '</div>',
+      );
+    }
+  }
+
 
   return $form;
 }

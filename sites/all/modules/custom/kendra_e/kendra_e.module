@@ -183,6 +183,18 @@ function kendra_e_resolve_asset_rights($asset, $start, $end, &$rt_split) {
     }
     $artist['percentage'] =$total ;
   }
+  // 5. Total each of the artists percentages per right type.
+  foreach ($resolved_asset_rights['type'] as $ryte_type_name => &$ryte_type) {
+    foreach ($ryte_type as $artist_name => &$artist) {
+      $total = 0;
+      foreach ($artist['contributions'] as $value) {
+        $total = $total + $value;
+      }
+      $artist['percentage'] =$total ;
+    }
+
+
+  }
 
 
   return $resolved_asset_rights;
@@ -356,7 +368,10 @@ function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100,
   // The array to hold the resolved asset rights data.
   $resolved_asset_rights = &drupal_static('kendra_hub_resolved_asset_rights');
   if (!isset($resolved_asset_rights)) {
-      $resolved_asset_rights = array();
+      $resolved_asset_rights = array(
+          'type' => array(),
+          'combined' => array(),
+      );
   }
 
   foreach ($contributions as $contribution) {
@@ -364,12 +379,11 @@ function _kendra_e_resolve_asset_rights_percentage($contributions, $share = 100,
       $name = $contribution['name'];
       $role = $contribution['role'];
       $right_type = $contribution['right_type'];
-      // Set percentage by right type
+      // Set percentage by right type.
       $resolved_asset_rights['type'][$right_type][$name]['roles'][$role] = $role;
       // Caloclate the contribution percentage.
-      $resolved_asset_rights['type'][$right_type][$name]['contributions'][] = $contribution['percentage'] * $share / 100;
-
-
+      $cpercentage  = $contribution['percentage'] * $share / 100;
+      $resolved_asset_rights['type'][$right_type][$name]['contributions'][] = $cpercentage;
       // Set the combined percentage
       // Add the role to the user.
       $resolved_asset_rights['combined'][$name]['roles'][$role] = $role;
