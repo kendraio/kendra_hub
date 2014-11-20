@@ -4,3 +4,14 @@ sites/*/settings*.php
 # Ignore paths that contain user-generated content.
 sites/*/files
 sites/*/private
+
+# Ignore paths that contain user-generated content.
+sites/*/files
+sites/*/private
+.DS_Store
+._*
+# Ignore sass-cache files.
+*.sass-cache*
+Gemfile.lock
+*.zip
+.idea
