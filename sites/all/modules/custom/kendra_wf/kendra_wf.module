@@ -8,13 +8,24 @@
 /**
  * Called from a views PHP field
  */
-function kendra_wf_calc_points_value($nid, &$static) {
+function kendra_wf_calc_points_value($nid, &$static, $start_p=0, $end_p=100) {
   //drupal_set_message($nid);
   $node = node_load($nid);
   $node_wrapper = entity_metadata_wrapper('node', $node);
 
   // Get the total usage (target usage).
   $target_usage = $node_wrapper->field_cont_target_usage->value();
+
+  // Reduce start and end points so they are within the provided once.
+  foreach ($target_usage as &$value) {
+    if ($value['from'] < $start_p) {
+      $value['from'] = $start_p;
+    }
+    if ($value['to'] > $end_p) {
+      $value['to'] = $end_p;
+    }
+  }
+
   $total_usage = _kendra_wf_calc_usage_value($target_usage);
   // Usage weight.
   $usage_weight = $node_wrapper->field_cont_usage_weight->value();
@@ -166,8 +177,10 @@ function kendra_wf_form_views_exposed_form_alter(&$form, &$form_state) {
       drupal_set_message('You have no target sample selected');
       return;
     }
-
-    $form['sample'] = array(
+    $form['sample_grp'] = array(
+      '#type' => 'fieldset',
+    );
+    $form['sample_grp']['sample'] = array(
        '#type' => 'submit',
        '#value' => t('Sample'),
        '#submit' => array('kendra_wf_sample_asset_form_submit'),
@@ -234,64 +247,238 @@ function kendra_wf_block_view($delta) {
 
   switch ($delta) {
     case 'aggregated_rights_table':
-      $block['content'] = kendra_wf_get_current_aggregated_rights_table();
+      //$block['content'] = kendra_wf_get_current_aggregated_rights_table();
+      $block['content'] = drupal_get_form('kendra_wf_get_current_aggregated_rights_table');
       break;
   }
   return $block;
 }
 
 
-function kendra_wf_get_current_aggregated_rights_table() {
+function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
   $content = array();
   $nid = arg(1);
   $asset = node_load($nid);
   if ($asset->type == 'asset') {
-    $content['title'] = array(
-      '#markup' => '<h2>Aggregated rights report</h2>',
-    );
-    /* $content['charts'] = array(
-      '#prefix' => '<div class="row">',
-      '#suffix' => '</div>',
-    );
-    */
 
-    $rights_chart = theme('rights_split', array(
-      'id' => 'rights-split-' . $nid,
-      'title' => t('Rights split'),
-      'rights' => array(
-        array('Composition', '50'),
-        array('Performance', '50'),
-      ),
-    ));
-    $content['charts']['rights'] = array(
-      //'#prefix' => '<div class="col-md-6">',
-      'chart' => $rights_chart,
-      //'#suffix' => '</div>',
-    );
+    $qp = drupal_get_query_parameters();
 
-    $splits = array();
-    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, 0, 100);
-    foreach ($resolved_asset_rights as $key => $legal_entity) {
-      $splits[] = array(
-        $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
-        $legal_entity['percentage'],
+    if (isset($qp['range'])) {
+      // If we have a range in the url use it
+      $range = array (
+        'start' => $qp['range']['value'],
+        'end' => $qp['range']['value2'],
+      );
+      // Remove the range used on the sample page.
+      unset($qp['range']);
+    }
+    else {
+      // Set the range to the complete asset.
+      $range = array (
+        'start' => 0,
+        'end' => 100,
       );
     }
 
+    if (empty($qp)) {
+      // Default.
+      $rt_split = array (
+          'Composition' => 40,
+          'Performance' => 50,
+          'Recording' => 10,
+      );
+    }
+    else {
+      $rt_split = array();
+      foreach ($qp as $key => $value) {
+        $rt_split[check_plain($key)] = check_plain($value);
+      }
+      //check_plain();
+    }
+
+    // Build the chart for the requested rights split chart.
+    $right_type_chart = Array (
+      'id' => 'rights-split-requested' . $nid,
+      'title' => t('Requested Rights split'),
+      'rights' => array(),
+    );
+    foreach ($rt_split as $key => $value) {
+      $right_type_chart['rights'][] = array($key, $value);
+    }
+    $requested_rights_chart = theme('rights_split', $right_type_chart);
+
+
+    // Resolve the rights for the asset.
+    // This will return an array with the rights information and if needed will
+    // Adjust the $rt_split.
+    $resolved_asset_rights = kendra_e_resolve_asset_rights($asset, $range['start'], $range['end'], $rt_split);
+    //print_r($resolved_asset_rights);
+
+
+    // Actual Rights split Chart (if not adjusted will be the same as requested).
+    $right_type_chart = Array (
+      'id' => 'rights-split-actual' . $nid,
+      'title' => t('Actual Rights split'),
+      'rights' => array(),
+    );
+    foreach ($rt_split as $key => $value) {
+      $right_type_chart['rights'][] = array($key, $value);
+    }
+    $actual_rights_chart = theme('rights_split', $right_type_chart);
+
+    // Build the combined rights split Graph & table
+    $splits = array();
+    $header = array('Artist', 'Contribution', 'Percent');
+    $rows = array();
+    if (isset($resolved_asset_rights['combined'])) {
+      foreach ($resolved_asset_rights['combined'] as $key => $legal_entity) {
+        // Graph.
+        $splits[] = array(
+          $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
+          $legal_entity['percentage'],
+        );
+        // Table.
+        $rows[] = array(
+            'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
+            'class' => array('split-row'),
+            );
+      }
+    }
+    // Theme the chart
     $entities_chart = theme('entities_split', array(
       'id' => 'legal-entities-split-' . $nid,
       'title' => t('Legal entities split'),
       'splits' => $splits,
     ));
+    // Theme the table
+    $entities_table =  theme('table', array('header' => $header,'rows' => $rows, 'attributes' => array('class' => array('combined-rights-table'))));
 
-    $content['charts']['entities'] = array(
-      //'#prefix' => '<div class="col-md-6">',
-      'chart' => $entities_chart,
-      //'#suffix' => '</div>',
+
+    // Put it all together.
+
+    // Configuration form.
+    $form['config'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Configuration'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
     );
 
+    $form['config']['r_split'] = array(
+        '#type' => 'select',
+        '#title' => t('Rights split'),
+        '#options' => array(
+          'Composition=40,Performance=50,Recording=10' => t('UK Radio'),
+          'Composition=45,Performance=50,Recording=5' => t('US Radio'),
+          'Composition=30,Performance=65,Recording=5' => t('FR TV'),
+          'Composition=50,Performance=40,Recording=10' => t('DE TV'),
+        ),
+        //'#default_value' => $category['selected'],
+        '#description' => t('Set rights split.'),
+      );
+    $form['config']['submit_button'] = array(
+      '#type' => 'submit',
+      '#value' => t('Run'),
+    );
+
+
+    // The Title.
+    $form['title'] = array(
+      '#prefix' => '<div class="rights-report-title">',
+      '#markup' => '<h2>Aggregated rights report</h2>',
+      '#suffix' => '</div>',
+    );
+    // The rights split
+    $form['rights_split'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Rights split'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+    );
+    $form['rights_split']['requested_rights'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $requested_rights_chart,
+      '#suffix' => '</div>',
+    );
+    $form['rights_split']['actual_rights'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $actual_rights_chart,
+      '#suffix' => '</div>',
+    );
+    // Combined Split chart and table.
+    $form['all_types'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Combined rights types'),
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+    );
+    // The chart
+    $form['all_types']['entities_chart'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      'chart' => $entities_chart,
+      '#suffix' => '</div>',
+    );
+    // The table.
+    $form['all_types']['entities_table'] = array(
+      '#prefix' => '<div class="col-md-6">',
+      '#markup' =>  $entities_table,
+      '#suffix' => '</div>',
+    );
   }
-  return $content;
+
+
+
+  // Finaly we need to create one chart per ryte type.
+  if (isset($resolved_asset_rights['type'])) {
+    foreach ($resolved_asset_rights['type'] as $right_type => $contributions) {
+      $splits = array();
+      $rows = array();
+      foreach ($contributions as $key => $legal_entity) {
+        // Graph.
+        $splits[] = array(
+          $key . ' (' . implode(', ', $legal_entity['roles']) . ')',
+          $legal_entity['percentage'],
+        );
+        // Table.
+        $rows[] = array(
+            'data' => array($key, implode(', ', $legal_entity['roles']),  $legal_entity['percentage']),
+            'class' => array('split-row'),
+            );
+
+      }
+      // Theme the chart
+      $entities_chart = theme('entities_split', array(
+        'id' => 'legal-entities-split-' .$right_type . '-' . $nid,
+        'title' => t('Legal entities split'),
+        'splits' => $splits,
+      ));
+      // Theme the table
+      $entities_table =  theme('table', array('header' => $header,'rows' => $rows, 'attributes' => array('class' => array( $right_type . '-rights-table'))));
+
+      // Combined Split chart and table.
+      $form[$right_type] = array(
+        '#type' => 'fieldset',
+        '#title' => t($right_type),
+        '#collapsible' => FALSE,
+        '#collapsed' => FALSE,
+      );
+      // The chart
+      $form[$right_type]['entities_chart'] = array(
+        '#prefix' => '<div class="col-md-6">',
+        'chart' => $entities_chart,
+        '#suffix' => '</div>',
+      );
+      // The table.
+      $form[$right_type]['entities_table'] = array(
+        '#prefix' => '<div class="col-md-6">',
+        '#markup' =>  $entities_table,
+        '#suffix' => '</div>',
+      );
+    }
+  }
+
+
+  return $form;
 }
 
 
@@ -359,3 +546,27 @@ function template_preprocess_subclip_usage(&$vars) {
 
 
 
+function kendra_wf_get_current_aggregated_rights_table_submit($form, &$form_state) {
+  // If we have a right split we will rebuild the url with the split.
+  if (isset($form_state['values']) && isset($form_state['values']['r_split'])) {
+      // Get curent path.
+      $path = current_path();
+      // Get the split items.
+      $split = $form_state['values']['r_split'];
+      $items = explode(',', $split);
+      // Build the query parameters.
+      $query = array();
+      foreach ($items as $value) {
+        $item = explode('=', $value);
+         $query[$item[0]]= $item[1];
+      }
+      // Add the range if sppecified (used by views exposed filter).
+      $qp = drupal_get_query_parameters();
+      if (isset($qp['range'])) {
+        $query['range']= $qp['range'];
+      }
+      $options = array('query' => $query);
+      // Call the page with the new query parameters.
+      drupal_goto($path, $options);
+  }
+}

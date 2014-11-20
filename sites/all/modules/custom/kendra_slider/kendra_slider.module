@@ -24,18 +24,84 @@ function kendra_slider_field_widget_info() {
  * Implements hook_field_widget_form().
  */
 function kendra_slider_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  //dpm($instance);
+
   $element += array(
     '#type' => 'slider',
     '#default_value' => isset($items[$delta]) ? array('value' => $items[$delta]['from'],
       'value2' => $items[$delta]['to']) :
-      array('value' => 0, 'value2' => 100),
+      array('value' => 0, 'value2' => 0),
     '#range' => TRUE,
   '#display_bubble' => TRUE,
   '#display_bubble_format' => '%{value}%||%{value}%',
+  '#element_validate' => array('_kendra_slider_range_validate'),
   '#display_inputs' => FALSE,
-  '#adjust_field_min' => "edit-field-cont-target-usage-und-{$delta}-value",
-  '#adjust_field_max' => "edit-field-cont-target-usage-und-{$delta}-value2",
   );
-  return $element;
+  return array('value' => $element);
+
+}
+
+function _kendra_slider_range_validate($element, &$form_state, $form) {
+  // copy from slider values to range field array keys
+
+  $from = $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['value']['value'];
+  $to = $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['value']['value2'];
+
+  if (!empty($from) || !empty($to)) {
+   $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['from'] = $from;
+   $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['to'] = $to;
+  }
+  else {
+   $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['from'] = '';
+   $form_state['values'][$element['#field_name']][$element['#language']][$element['#delta']]['to'] = '';
+  }
+
+  //dpm(get_defined_vars());
+}
+
+
+/**
+ * Implements hook_FORMID_alter().
+ *
+ * Form alter to add the slider.
+ */
+function kendra_slider_form_views_exposed_form_alter(&$form, &$form_state) {
+  if (($form_state['view']->name == 'asset_contributions') && ($form_state['view']->current_display == 'sample_asset') ) {
+    $form['#validate'][] = '_kendra_slider_sample_filter_validate';
+
+    $form['slider'] = array(
+      '#type' => 'fieldset',
+    );
+    $form['slider']['range'] = array(
+      '#type' => 'slider',
+      //'#title' => t('Range'),
+      '#default_value' => array(
+        'value' => $form['field_cont_target_usage_to']['#default_value'],
+        'value2' => $form['field_cont_target_usage_from']['#default_value'],
+      ),
+      '#slider_style' => 'blue',
+      '#weight' => -99,
+      '#range' => TRUE,
+      '#min' => 0,
+      '#max' => 100,
+      '#step' => 1,
+      '#display_inputs' => FALSE,
+      '#display_bubble' => TRUE,
+      //'#size' => 300,
+    );
+    $form['field_cont_target_usage_to']['#access'] = FALSE;
+    $form['field_cont_target_usage_from']['#access'] = FALSE;
+  }
+
+}
+
+/**
+ * Callback used by Views exposed form to transfer range slider values
+ * into filters...
+ */
+function _kendra_slider_sample_filter_validate($form, &$form_state) {
+  // dpm(func_get_args());
+  if (!empty($form_state['values']['range'])) {
+    $form_state['values']['field_cont_target_usage_to'] = $form_state['values']['range']['value'];
+    $form_state['values']['field_cont_target_usage_from'] = $form_state['values']['range']['value2'];
+  }
 }
