@@ -5,9 +5,6 @@ sites/*/settings*.php
 sites/*/files
 sites/*/private
 
-# Ignore configuration files that may contain sensitive information.
-/tmp
-
 .DS_Store
 ._*
 # Ignore sass-cache files.
@@ -15,4 +12,3 @@ sites/*/private
 Gemfile.lock
 *.zip
 .idea
-
