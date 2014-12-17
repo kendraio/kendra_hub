@@ -1,0 +1,7 @@
+name = Kendra Hub User
+description = Provide User access control and other functionality.
+package = Kendra
+core = 7.x
+
+; Views plugin
+files[] = includes/plugins/kendra_user_views_plugin_access.inc
