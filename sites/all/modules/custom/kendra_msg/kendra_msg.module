@@ -68,7 +68,13 @@ function kendra_msg_user_createmessage_submit($form, &$form_state) {
   $wrapper->field_msg_title = check_plain($form_state['values']['title']);
   $wrapper->field_msg_body = check_plain($form_state['values']['body']);
   $wrapper->field_msg_recipient = $uid;
-  $wrapper->save();
+  //$wrapper->save();
+
+  $recipient_user = user_load($uid);
+
+  $destination_email = $recipient_user->mail;
+  $options = array('mail' => $destination_email);
+  message_notify_send_message($message, $options);
 
   drupal_set_message('New message to ' . $uid);
 
