@@ -257,7 +257,10 @@ function kendra_wf_block_view($delta) {
 
 function kendra_wf_get_current_aggregated_rights_table($form, &$form_state) {
   $content = array();
-  $nid = arg(1);
+  $nid = (int) arg(1);
+  if ($nid == 0) {
+    return $form;
+  }
   $asset = node_load($nid);
   if ($asset->type == 'asset') {
 
