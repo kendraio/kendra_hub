@@ -1,0 +1,82 @@
+<?php
+
+/**
+ * @file
+ * Provide messaging functionality for Kendra Hub.
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function kendra_msg_block_info() {
+  // User block for creating orders.
+  $blocks['kendra_msg_user'] = array(
+    'info' => t('Kendra Hub user messaging'),
+    // Block to be enabled.
+    'status' => 1,
+    // Not changing at the moment so ok to cache.
+    'cache' => DRUPAL_CACHE_GLOBAL,
+    // Put on user page.
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => 'users/*',
+    // Position at he top of the content region.
+    'region' => 'content',
+    'weight' => -100,
+  );
+
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view().
+ */
+function kendra_msg_block_view($delta = '') {
+
+  $block = array();
+
+  switch ($delta) {
+    case 'kendra_msg_user':
+      $block['subject'] = t('New Message');
+      $block['content'] = drupal_get_form('kendra_msg_user_createmessage');
+      break;
+
+  }
+  return $block;
+}
+
+function kendra_msg_user_createmessage($form, &$form_state) {
+  $form['title'] = array('#type' => 'textfield', '#title' => t('Title'));
+  $form['body'] = array('#type' => 'textarea', '#title' => t('Body'));
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Create new message'
+        . ''));
+    return $form;
+}
+
+function kendra_msg_user_createmessage_submit($form, &$form_state) {
+  // Make sure called from the user page.
+  if (arg(0) != 'user') {
+    drupal_set_message('You can only call this function from the user page');
+    return;
+  }
+  $uid = check_plain(arg(1));
+
+  $message = message_create('user_message', array());
+  // Save reference to the node in the node reference field, and the
+  // "publish" state (i.e. if the node is published or unpublished).
+  $wrapper = entity_metadata_wrapper('message', $message);
+  $wrapper->field_msg_title = check_plain($form_state['values']['title']);
+  $wrapper->field_msg_body = check_plain($form_state['values']['body']);
+  $wrapper->field_msg_recipient = $uid;
+  //$wrapper->save();
+
+  $recipient_user = user_load($uid);
+
+  $destination_email = $recipient_user->mail;
+  $options = array('mail' => $destination_email);
+  message_notify_send_message($message, $options);
+
+  drupal_set_message('New message to ' . $uid);
+
+}
+
