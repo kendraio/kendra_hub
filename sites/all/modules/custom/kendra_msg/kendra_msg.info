@@ -1,0 +1,6 @@
+name = Kendra Hub Messaging
+description = Provide messaging functionality for Kendra Hub.
+package = Kendra
+dependencies[] = message
+dependencies[] = views
+core = 7.x
