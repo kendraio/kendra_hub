@@ -1,0 +1,104 @@
+<?php
+
+/**
+ * @file
+ * Provide User access control and other functionality.
+ */
+
+
+/**
+ * Implements hook_views_api().
+ */
+function kendra_user_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'kendra_user') . '/includes',
+  );
+}
+
+
+/**
+ * Checks if the curent user allowed to edit the asset.
+ *
+ * TRUE if user is is the owner of the asset page or user has kendra admin role.
+ */
+function kendra_user_can_user_edit_asset() {
+  global $user;
+  return kendra_user_can_specified_user_edit_asset($user);
+}
+
+/**
+ * Checks if the specified user allowed to edit the asset.
+ *
+ * TRUE if user is is the owner of the asset page or user has kendra admin role.
+ */
+function kendra_user_can_specified_user_edit_asset($user) {
+
+  // If an admin or a kendra admin.
+  if (in_array('kendra', $user->roles) | in_array('administrator', $user->roles)) {
+    // Allays allow access.
+    return TRUE;
+  }
+
+// If an Asset Author
+if (in_array('Asset Author', $user->roles)) {
+// check if a node page.
+  If (arg(0) == 'node') {
+    $node = node_load(arg(1));
+    // Check if asset page.
+    if ($node->type == 'asset') {
+      // Return TRUE if same user.
+      return ($node->uid == $user->uid);
+    }
+  }
+}
+
+// All other cases should return FALSE.
+return FALSE;
+
+}
+
+/**
+ * Unlike the above function this will work for both assets and contributions.
+ */
+function kendra_user_can_specified_user_edit_specified_asset($user, $node) {
+  switch ($node->type) {
+    case 'contribution':
+        // If a kendra admin.
+        if (in_array('kendra', $user->roles)) {
+          // Then he can edit the asset.
+          return TRUE;
+        }
+        // If user has an asset author role.
+        if (in_array('Asset Author', $user->roles)) {
+          // We will get the asset node from the contribution.
+          $contribution_wrapper = entity_metadata_wrapper('node', $node);
+          $asset_nid = $contribution_wrapper->field_cont_work->getIdentifier();
+          $asset_node = node_load($asset_nid);
+          // We will recursively call this function but with the asset node.
+          return kendra_user_can_specified_user_edit_specified_asset($user, $asset_node);
+        }
+        break;
+
+    case 'asset':
+        // If a kendra admin.
+        if (in_array('kendra', $user->roles)) {
+          // Then he can edit the asset.
+          return TRUE;
+        }
+        // If user has an asset author role.
+        if (in_array('Asset Author', $user->roles)) {
+          // User can edit if he is the owner.
+          return ($node->uid == $user->uid);
+        }
+        else {
+          return FALSE;
+        }
+        break;
+
+    default:
+        // FALSE in all other cases
+        return FALSE;
+        break;
+  }
+}
