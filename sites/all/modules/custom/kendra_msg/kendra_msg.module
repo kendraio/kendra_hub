@@ -76,7 +76,7 @@ function kendra_msg_user_createmessage_submit($form, &$form_state) {
   $options = array('mail' => $destination_email);
   message_notify_send_message($message, $options);
 
-  drupal_set_message('New message to ' . $uid);
+  drupal_set_message('New message to ' . $recipient_user->name);
 
 }
 
