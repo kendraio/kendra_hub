@@ -45,6 +45,9 @@ function kendra_msg_block_view($delta = '') {
   return $block;
 }
 
+/*
+ * function to add the message form to the user page.
+ */
 function kendra_msg_user_createmessage($form, &$form_state) {
   $form['title'] = array('#type' => 'textfield', '#title' => t('Title'));
   $form['body'] = array('#type' => 'textarea', '#title' => t('Body'));
@@ -53,6 +56,9 @@ function kendra_msg_user_createmessage($form, &$form_state) {
     return $form;
 }
 
+/*
+ * Function to send the message when the user click submit
+ */
 function kendra_msg_user_createmessage_submit($form, &$form_state) {
   // Make sure called from the user page.
   if (arg(0) != 'user') {
@@ -76,7 +82,7 @@ function kendra_msg_user_createmessage_submit($form, &$form_state) {
   $options = array('mail' => $destination_email);
   message_notify_send_message($message, $options);
 
-  drupal_set_message('New message to ' . $recipient_user->name);
+  drupal_set_message('New message to ' . $recipient_user->realname);
 
 }
 
