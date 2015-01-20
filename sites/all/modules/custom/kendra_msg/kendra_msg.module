@@ -60,23 +60,23 @@ function kendra_msg_user_createmessage($form, &$form_state) {
  * Function to send the message when the user click submit
  */
 function kendra_msg_user_createmessage_submit($form, &$form_state) {
+  global $user;
   // Make sure called from the user page.
   if (arg(0) != 'user') {
     drupal_set_message('You can only call this function from the user page');
     return;
   }
   $uid = check_plain(arg(1));
+  $recipient_user = user_load($uid);
 
-  $message = message_create('user_message', array());
+  $message = message_create('user_message', array(), $recipient_user );
   // Save reference to the node in the node reference field, and the
   // "publish" state (i.e. if the node is published or unpublished).
   $wrapper = entity_metadata_wrapper('message', $message);
   $wrapper->field_msg_title = check_plain($form_state['values']['title']);
   $wrapper->field_msg_body = check_plain($form_state['values']['body']);
-  $wrapper->field_msg_recipient = $uid;
+  $wrapper->field_msg_sender = $user;
   //$wrapper->save();
-
-  $recipient_user = user_load($uid);
 
   $destination_email = $recipient_user->mail;
   $options = array('mail' => $destination_email);
@@ -85,4 +85,3 @@ function kendra_msg_user_createmessage_submit($form, &$form_state) {
   drupal_set_message('New message to ' . $recipient_user->realname);
 
 }
-
