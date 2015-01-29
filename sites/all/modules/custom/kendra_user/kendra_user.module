@@ -16,6 +16,15 @@ function kendra_user_views_api() {
   );
 }
 
+/**
+ * Implements hook_ctools_plugin_directory() to let the system know
+  * where our task and task_handler plugins are.
+ */
+function kendra_user_ctools_plugin_directory($owner, $plugin_type) {
+  if ($owner == 'ctools' && $plugin_type == 'access') {
+    return 'includes/plugins/access';
+  }
+}
 
 /**
  * Checks if the curent user allowed to edit the asset.
@@ -92,10 +101,14 @@ function kendra_user_can_specified_user_edit_specified_asset($user, $node) {
         }
         break;
 
-    case 'sync-request':
+    case 'sync_request':
         // If a kendra admin.
         if (in_array('kendra', $user->roles)) {
           // Then he can edit the asset.
+          return TRUE;
+        }
+        // Request owner
+        if ($node->uid == $user->uid) {
           return TRUE;
         }
         // If user has an asset author role.
