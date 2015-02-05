@@ -3,6 +3,9 @@ description = Provide User access control and other functionality.
 package = Kendra
 core = 7.x
 dependencies[] = rules
+dependencies[] = ctools
 
 ; Views plugin
 files[] = includes/plugins/kendra_user_views_plugin_access.inc
+; Ctools plugins
+files[] = includes/plugins/access/kendra_user_access_ctools.inc
