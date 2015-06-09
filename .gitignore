@@ -4,6 +4,8 @@ sites/*/settings*.php
 # Ignore paths that contain user-generated content.
 sites/*/files
 sites/*/private
+sites/*/settings*.php*
+sites/default/drushrc.php
 
 .DS_Store
 ._*
