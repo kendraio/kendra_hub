@@ -1,8 +1,7 @@
-name = LESS (source)
-description = Uses the LESS Bootstrap framework source files and must be compiled (not for beginners).
+name = 'THEMETITLE'
+description = Uses the Bootstrap Framework Less source files and must be compiled (not for beginners).
 core = 7.x
 base theme = bootstrap
-php = 5.3.0
 
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -45,5 +44,5 @@ scripts[] = 'bootstrap/js/scrollspy.js'
 scripts[] = 'bootstrap/js/tab.js'
 scripts[] = 'bootstrap/js/transition.js'
 
-; Disable BootstrapCDN so the compiled LESS source files can be used.
+; Disable the CDN provider so compiled source files can be used.
 settings[bootstrap_cdn] = ''

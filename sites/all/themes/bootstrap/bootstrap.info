@@ -1,7 +1,13 @@
 name = Bootstrap
 description = Built to use Bootstrap, a sleek, intuitive, and powerful front-end framework for faster and easier web development.
 core = 7.x
-php = 5.3.0
+
+
+;;;;;;;;;;;;;;;;;;;;;
+;; SimplyTest.me
+;;;;;;;;;;;;;;;;;;;;;
+
+simplytest_dependencies[] = jquery_update
 
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -24,20 +30,15 @@ regions[page_bottom]    = 'Page bottom'
 ;; Theme Settings
 ;;;;;;;;;;;;;;;;;;;;;
 
+; Container
+; --------------
+settings[bootstrap_fluid_container] = 0
+
 ; Buttons
 ; --------------
 settings[bootstrap_button_size] = ''
 settings[bootstrap_button_colorize] = 1
 settings[bootstrap_button_iconize] = 1
-
-; Grid
-; --------------
-settings[bootstrap_grid_columns] = 12
-settings[bootstrap_grid_class_prefix] = 'col-sm'
-settings[bootstrap_region_grid-sidebar_first] = 3
-settings[bootstrap_region_grid-sidebar_second] = 3
-settings[bootstrap_region_grid_dynamic-content][sidebar_first] = 'sidebar_first'
-settings[bootstrap_region_grid_dynamic-content][sidebar_second] = 'sidebar_second'
 
 ; Images
 ; --------------
@@ -63,10 +64,14 @@ settings[bootstrap_breadcrumb_title] = 1
 settings[bootstrap_navbar_position] = ''
 settings[bootstrap_navbar_inverse] = 0
 
+; Pager
+; --------------
+settings[bootstrap_pager_first_and_last] = 1
+
 ; Region Wells
 ; --------------
 settings[bootstrap_region_well-navigation] = ''
-settings[bootstrap_region_well-header] = 'well'
+settings[bootstrap_region_well-header] = ''
 settings[bootstrap_region_well-highlighted] = ''
 settings[bootstrap_region_well-help] = ''
 settings[bootstrap_region_well-content] = ''
@@ -76,8 +81,16 @@ settings[bootstrap_region_well-footer] = ''
 
 ; Anchors
 ; --------------
-settings[bootstrap_anchors_fix] = 1
-settings[bootstrap_anchors_smooth_scrolling] = 1
+settings[bootstrap_anchors_fix] = 0
+settings[bootstrap_anchors_smooth_scrolling] = 0
+
+; Forms
+; --------------
+settings[bootstrap_forms_required_has_error] = 0
+settings[bootstrap_forms_has_error_value_toggle] = 1
+settings[bootstrap_forms_smart_descriptions] = 1
+settings[bootstrap_forms_smart_descriptions_limit] = 250
+settings[bootstrap_forms_smart_descriptions_allowed_tags] = 'b, code, em, i, kbd, span, strong'
 
 ; Popovers
 ; --------------
@@ -98,8 +111,6 @@ settings[bootstrap_popover_container] = 'body'
 ; Tooltips
 ; --------------
 settings[bootstrap_tooltip_enabled] = 1
-settings[bootstrap_tooltip_descriptions] = 1
-settings[bootstrap_tooltip_descriptions_length] = 200
 settings[bootstrap_tooltip_animation] = 1
 settings[bootstrap_tooltip_html] = 0
 settings[bootstrap_tooltip_placement] = 'auto left'
@@ -112,14 +123,22 @@ settings[bootstrap_tooltip_container] = 'body'
 
 ; Advanced
 ; --------------
-settings[bootstrap_cdn] = 3.1.1
-settings[bootstrap_bootswatch] = ''
+settings[bootstrap_cdn_provider] = 'jsdelivr'
+settings[bootstrap_cdn_custom_css] = 'https://cdn.jsdelivr.net/bootstrap/3.3.5/css/bootstrap.css'
+settings[bootstrap_cdn_custom_css_min] = 'https://cdn.jsdelivr.net/bootstrap/3.3.5/css/bootstrap.min.css'
+settings[bootstrap_cdn_custom_js] = 'https://cdn.jsdelivr.net/bootstrap/3.3.5/js/bootstrap.js'
+settings[bootstrap_cdn_custom_js_min] = 'https://cdn.jsdelivr.net/bootstrap/3.3.5/js/bootstrap.min.js'
+settings[bootstrap_cdn_jsdelivr_version] = '3.3.5'
+settings[bootstrap_cdn_jsdelivr_theme] = 'bootstrap'
 
 ; Global
 ; --------------
 settings[toggle_name] = 1
 settings[toggle_search] = 1
 
+; jQuery Update
+; --------------
+settings[jquery_update_jquery_version] = 2.1
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Excludes
@@ -131,10 +150,17 @@ settings[toggle_search] = 1
 
 ; CSS
 ; --------------
+; Necessary module CSS.
+
+;exclude[css][] = 'modules/block/block.css'
+;exclude[css][] = 'modules/node/node.css'
+;exclude[css][] = 'modules/system/admin.css'
+;exclude[css][] = 'modules/system/system.css'
+;exclude[css][] = 'modules/system/system.admin.css'
+;exclude[css][] = 'modules/system/system.base.css'
+
 exclude[css][] = 'misc/vertical-tabs.css'
 exclude[css][] = 'modules/aggregator/aggregator.css'
-; Necessary administrative block CSS.
-; exclude[css][] = 'modules/block/block.css'
 exclude[css][] = 'modules/book/book.css'
 exclude[css][] = 'modules/comment/comment.css'
 exclude[css][] = 'modules/dblog/dblog.css'
@@ -143,7 +169,6 @@ exclude[css][] = 'modules/filter/filter.css'
 exclude[css][] = 'modules/forum/forum.css'
 exclude[css][] = 'modules/help/help.css'
 exclude[css][] = 'modules/menu/menu.css'
-exclude[css][] = 'modules/node/node.css'
 exclude[css][] = 'modules/openid/openid.css'
 exclude[css][] = 'modules/poll/poll.css'
 exclude[css][] = 'modules/search/search.css'
@@ -158,21 +183,34 @@ exclude[css][] = 'modules/taxonomy/taxonomy.css'
 exclude[css][] = 'modules/tracker/tracker.css'
 exclude[css][] = 'modules/update/update.css'
 exclude[css][] = 'modules/user/user.css'
-;exclude[css][] = 'modules/system/admin.css'
-;exclude[css][] = 'modules/system/system.css'
-;exclude[css][] = 'modules/system/system.admin.css'
-;exclude[css][] = 'modules/system/system.base.css'
 
 
 ;;;;;;;;;;;;;;;;;;;;;
-;; SimplyTest.me
+;; Breakpoints
 ;;;;;;;;;;;;;;;;;;;;;
+breakpoints[screen-xs-max] = (max-width: 767px)
+breakpoints[screen-sm-min] = (min-width: 768px)
+breakpoints[screen-sm-max] = (max-width: 991px)
+breakpoints[screen-md-min] = (min-width: 992px)
+breakpoints[screen-md-max] = (max-width: 1199px)
+breakpoints[screen-lg-min] = (min-width: 1200px)
+; Multipiers
+multipliers[screen-xs-max][] = 1.5x
+multipliers[screen-xs-max][] = 2x
+multipliers[screen-sm-min][] = 1.5x
+multipliers[screen-sm-min][] = 2x
+multipliers[screen-sm-max][] = 1.5x
+multipliers[screen-sm-max][] = 2x
+multipliers[screen-md-min][] = 1.5x
+multipliers[screen-md-min][] = 2x
+multipliers[screen-md-max][] = 1.5x
+multipliers[screen-md-max][] = 2x
+multipliers[screen-lg-min][] = 1.5x
+multipliers[screen-lg-min][] = 2x
 
-simplytest_dependencies[] = jquery_update
-
-; Information added by Drupal.org packaging script on 2014-05-18
-version = "7.x-3.1-beta1"
+; Information added by Drupal.org packaging script on 2016-11-02
+version = "7.x-3.8"
 core = "7.x"
 project = "bootstrap"
-datestamp = "1400447629"
+datestamp = "1478114647"
 
