@@ -52,6 +52,26 @@ var Drupal = Drupal || {};
   };
 
   /**
+   * Behavior for .
+   */
+  Drupal.behaviors.bootstrapFormHasError = {
+    attach: function (context, settings) {
+      if (settings.bootstrap && settings.bootstrap.formHasError) {
+        var $context = $(context);
+        $context.find('.form-item.has-error:not(.form-type-password.has-feedback)').once('error', function () {
+          var $formItem = $(this);
+          var $input = $formItem.find(':input');
+          $input.on('keyup focus blur', function () {
+            var value = $input.val() || false;
+            $formItem[value ? 'removeClass' : 'addClass']('has-error');
+            $input[value ? 'removeClass' : 'addClass']('error');
+          });
+        });
+      }
+    }
+  };
+
+  /**
    * Bootstrap Popovers.
    */
   Drupal.behaviors.bootstrapPopovers = {
@@ -132,7 +152,7 @@ var Drupal = Drupal || {};
           }
         }
       }
-      if (!settings.bootstrap || !settings.bootstrap.anchorsFix) {
+      if (!settings.bootstrap || settings.bootstrap.anchorsFix !== '1') {
         return;
       }
       var anchors = $(context).find('a').toArray();
@@ -143,7 +163,9 @@ var Drupal = Drupal || {};
       }
       $scrollableElement.once('bootstrap-anchors', function () {
         $scrollableElement.on('click.bootstrap-anchors', 'a[href*="#"]:not([data-toggle],[data-target],[data-slide])', function(e) {
-          this.scrollTo(e);
+          if (this.scrollTo) {
+            this.scrollTo(e);
+          }
         });
       });
     },
@@ -155,7 +177,7 @@ var Drupal = Drupal || {};
         // Check for anchors that use the name attribute instead.
         if (!$target.length) {
           attr = 'name';
-          $target = $('[name="' + element.hash.replace('#', '') + '"');
+          $target = $('[name="' + element.hash.replace('#', '') + '"]');
         }
         // Immediately stop if no anchors are found.
         if (!this.validAnchor && !$target.length) {
@@ -198,7 +220,7 @@ var Drupal = Drupal || {};
    * Tabledrag theming elements.
    */
   Drupal.theme.tableDragChangedMarker = function () {
-    return '<span class="tabledrag-changed glyphicon glyphicon-asterisk text-warning"></span>';
+    return '<span class="tabledrag-changed glyphicon glyphicon-warning-sign text-warning"></span>';
   };
 
   Drupal.theme.tableDragChangedWarning = function () {
