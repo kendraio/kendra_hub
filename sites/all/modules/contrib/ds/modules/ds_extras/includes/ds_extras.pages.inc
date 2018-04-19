@@ -23,14 +23,30 @@ function ds_extras_node_page_view($node) {
   // Update the history table, stating that this user viewed this node.
   node_tag_new($node);
 
-  // For markup consistency with other pages, use node_view_multiple() rather than node_view().
-  $view_mode = (!empty($node->ds_switch)) ? $node->ds_switch : 'full';
+  if (empty($node->ds_switch)) {
+    // When not set fall back to full
+    $view_mode = 'full';
+  }
+  elseif ($node->ds_switch == 'default') {
+    // When default set fall back to full
+    $view_mode = 'full';
+  }
+  else {
+    $view_mode = $node->ds_switch;
+  }
 
   // It's also possible to use $_GET['v'] to switch view modes.
   if (isset($_GET['v']) && !empty($_GET['v'])) {
     $view_mode = $_GET['v'];
+    // Check if this is a valid view mode, switch to default otherwise.
+    $view_modes = ds_extras_get_bundle_view_modes('node', $node->type);
+    if (!isset($view_modes[$view_mode])) {
+      $view_mode = 'full';
+    }
   }
   drupal_static('ds_extras_view_mode', $view_mode);
+
+  // For markup consistency with other pages, use node_view_multiple() rather than node_view().
   return node_view_multiple(array($node->nid => $node), $view_mode);
 }
 
