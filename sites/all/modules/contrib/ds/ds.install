@@ -20,6 +20,9 @@ function ds_install() {
  */
 function ds_uninstall() {
   variable_del('ds_classes_regions');
+  variable_del('ds_disable');
+  variable_del('ds_extras_region_blocks');
+  variable_del('menu_rebuild_needed');
 }
 
 /**
@@ -69,7 +72,7 @@ function ds_schema() {
       'view_mode' => array(
         'description' => 'The name of the view_mode.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 64,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -131,7 +134,7 @@ function ds_schema() {
       'view_mode' => array(
         'description' => 'The name of the view_mode.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 64,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -179,7 +182,7 @@ function ds_schema() {
       'view_mode' => array(
         'description' => 'The machine name of the view mode.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 64,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -290,4 +293,38 @@ function ds_update_7202() {
       'not null' => TRUE,
       'default' => '',
     ));
+}
+
+
+/**
+ * Increase the view_mode storage length to 64
+ */
+function ds_update_7203() {
+  db_change_field('ds_field_settings', 'view_mode', 'view_mode',
+    array(
+      'description' => 'The name of the view_mode.',
+      'type' => 'varchar',
+      'length' => 64,
+      'not null' => TRUE,
+      'default' => '',
+    )
+  );
+  db_change_field('ds_layout_settings', 'view_mode', 'view_mode',
+    array(
+      'description' => 'The name of the view_mode.',
+      'type' => 'varchar',
+      'length' => 64,
+      'not null' => TRUE,
+      'default' => '',
+    )
+  );
+  db_change_field('ds_view_modes', 'view_mode', 'view_mode',
+    array(
+      'description' => 'The machine name of the view mode.',
+      'type' => 'varchar',
+      'length' => 64,
+      'not null' => TRUE,
+      'default' => '',
+    )
+  );
 }
