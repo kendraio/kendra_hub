@@ -1,0 +1,190 @@
+<?php
+
+/**
+ * @file
+ * Contains range form validation tests.
+ */
+
+/**
+ * Tests form validation for range fields.
+ */
+class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
+
+  /**
+   * Meta information about tests.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Field widget validation',
+      'description' => 'Tests range field widget validation.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    parent::setUp($modules);
+
+    $this->createTestContentType();
+    $account = $this->drupalCreateUser(array('administer content types', 'administer nodes', "create $this->contentType content"));
+    $this->drupalLogin($account);
+  }
+
+  /**
+   * Tests range field validation.
+   */
+  public function testRangeFieldFormValidation() {
+    $this->createTestRangeField('range_integer');
+
+    $this->drupalGet("node/add/$this->contentType");
+    $field_name = $this->getTestFieldName('range_integer');
+    $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
+
+    // Test field validation error messages.
+    //
+    // Both FROM and TO values must be specified.
+    $edit = array(
+      "{$form_element_key}[from]" => static::INSTANCE_SETTINGS_MIN,
+      "{$form_element_key}[to]" => '',
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: you must specify two values.', array('%name' => static::INSTANCE_LABEL));
+    $this->assertRaw($error_message, format_string('Correct field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    $edit = array(
+      "{$form_element_key}[from]" => '',
+      "{$form_element_key}[to]" => static::INSTANCE_SETTINGS_MAX,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: you must specify two values.', array('%name' => static::INSTANCE_LABEL));
+    $this->assertRaw($error_message, format_string('Correct field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    // The FROM value is less than the allowed minimum value.
+    $edit = array(
+      "{$form_element_key}[from]" => static::INSTANCE_SETTINGS_MIN - 1,
+      "{$form_element_key}[to]" => static::INSTANCE_SETTINGS_MAX,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: the FROM value may be no less than %min.', array('%name' => static::INSTANCE_LABEL, '%min' => static::INSTANCE_SETTINGS_MIN));
+    $this->assertRaw($error_message, format_string('Correct field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    // The TO value is greater than the allowed maximum value.
+    $edit = array(
+      "{$form_element_key}[from]" => static::INSTANCE_SETTINGS_MIN,
+      "{$form_element_key}[to]" => static::INSTANCE_SETTINGS_MAX + 1,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: the TO value may be no greater than %max.', array('%name' => static::INSTANCE_LABEL, '%max' => static::INSTANCE_SETTINGS_MAX));
+    $this->assertRaw($error_message, format_string('Correct field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    // FROM value is greater than TO value.
+    $edit = array(
+      "{$form_element_key}[from]" => static::INSTANCE_SETTINGS_MAX,
+      "{$form_element_key}[to]" => static::INSTANCE_SETTINGS_MIN,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: FROM value is greater than TO value.', array('%name' => static::INSTANCE_LABEL));
+    $this->assertRaw($error_message, format_string('Correct field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+  }
+
+  /**
+   * Tests field widget validation for range integer fields.
+   */
+  protected function testRangeIntegerFormValidation() {
+    $this->createTestRangeField('range_integer');
+
+    $this->drupalGet("node/add/$this->contentType");
+    $field_name = $this->getTestFieldName('range_integer');
+    $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
+
+    // Test field widget validation error messages.
+    //
+    // Only numbers are allowed.
+    $incorrect_entries = array(
+      array('from' => 'A', 'to' => 'Z'),
+      array('from' => '1.0', 'to' => '2.00'),
+      array('from' => '-1.0', 'to' => '2-'),
+      array('from' => '0A', 'to' => '9Z'),
+      array('from' => '-1-', 'to' => '2-2'),
+    );
+
+    foreach ($incorrect_entries as $entries) {
+      $edit = array(
+        "{$form_element_key}[from]" => $entries['from'],
+        "{$form_element_key}[to]" => $entries['to'],
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+      $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    }
+  }
+
+  /**
+   * Helper method. Tests widget validation for given field type.
+   *
+   * @param string $field_type
+   *   Field type to test against. Could be one of the following values:
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFloatFormValidation($field_type) {
+    $this->createTestRangeField($field_type);
+
+    $this->drupalGet("node/add/$this->contentType");
+    $field_name = $this->getTestFieldName($field_type);
+    $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
+
+    // Test field widget validation error messages.
+    //
+    // Only numbers and the decimal separator allowed.
+    $incorrect_entries = array(
+      array('from' => 'A', 'to' => 'Z'),
+      array('from' => '1..0', 'to' => '2.0.0'),
+      array('from' => '-1.0.', 'to' => '2-.'),
+      array('from' => '0A', 'to' => '9Z'),
+      array('from' => '-1.0-', 'to' => '2.0-2'),
+    );
+    foreach ($incorrect_entries as $entries) {
+      $edit = array(
+        "{$form_element_key}[from]" => $entries['from'],
+        "{$form_element_key}[to]" => $entries['to'],
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $error_message = t('Only numbers and the decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+      $error_message = t('Only numbers and the decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    }
+    // There should only be one decimal separator.
+    $incorrect_entries = array(
+      array('from' => '1,,0', 'to' => '2,0,0'),
+      array('from' => '-1,0,', 'to' => '2,,'),
+      array('from' => '-1,0,,0', 'to' => ',,2'),
+    );
+    foreach ($incorrect_entries as $entries) {
+      $edit = array(
+        "{$form_element_key}[from]" => $entries['from'],
+        "{$form_element_key}[to]" => $entries['to'],
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $error_message = t('%field: There should only be one decimal separator (@separator).', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+      $error_message = t('%field: There should only be one decimal separator (@separator).', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    }
+  }
+
+  /**
+   * Tests field widget validation for range float fields.
+   */
+  public function testRangeFloatFormValidation() {
+    $this->_testRangeFloatFormValidation('range_float');
+  }
+
+  /**
+   * Tests field widget validation for range decimal fields.
+   */
+  public function testRangeDecimalFormValidation() {
+    $this->_testRangeFloatFormValidation('range_decimal');
+  }
+
+}

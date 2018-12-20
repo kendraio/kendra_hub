@@ -1,0 +1,154 @@
+<?php
+
+/**
+ * @file
+ * Contains range views base test class.
+ */
+
+/**
+ * Base class for testing range views handlers.
+ */
+abstract class RangeViewsBaseTestCase extends ViewsTestCase {
+
+  /**
+   * Entity type ID we are testing against.
+   *
+   * @var string
+   */
+  protected $entityTypeId = 'node';
+
+  /**
+   * Content type we are testing against.
+   *
+   * @var string
+   */
+  protected $contentType = 'test_bundle';
+
+  /**
+   * Name of the field we are testing against.
+   *
+   * Note, this is used in the default test view.
+   *
+   * @var string
+   */
+  protected $fieldName = 'field_range_integer';
+
+  /**
+   * Nodes to test.
+   *
+   * @var stdClass[]
+   */
+  protected $nodes = array();
+
+  /**
+   * View result columns map.
+   *
+   * @var array
+   */
+  protected $map = array('nid' => 'nid');
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    $modules[] = 'range';
+    $modules[] = 'search_api';
+    $modules[] = 'search_api_db';
+    $modules[] = 'search_api_views';
+    $modules[] = 'views';
+    parent::setUp($modules);
+
+    // Add a date field to page nodes.
+    $content_type = new stdClass();
+    $content_type->type = $this->contentType;
+    $content_type->name = $this->contentType;
+    $content_type->base = 'node_content';
+    $content_type->custom = 1;
+    $content_type->locked = 0;
+    $content_type->modified = 1;
+
+    node_type_save($content_type);
+
+    node_types_rebuild();
+    menu_rebuild();
+
+    // Reset permissions so that permissions for this content type are available.
+    $this->checkPermissions(array(), TRUE);
+
+    $field = array(
+      'field_name' => $this->fieldName,
+      'type' => 'range_integer',
+      'cardinality' => 1,
+      'settings' => array(),
+    );
+    field_create_field($field);
+
+    $instance = array(
+      'field_name' => $this->fieldName,
+      'entity_type' => $this->entityTypeId,
+      'bundle' => $this->contentType,
+      'label' => $this->randomName(),
+    );
+    field_create_instance($instance);
+
+    // Add some basic test nodes.
+    $ranges = array(
+      array('from' => 0, 'to' => 10),
+      array('from' => 5, 'to' => 9),
+      array('from' => -5, 'to' => 15),
+      array('from' => 6, 'to' => 10),
+    );
+    foreach ($ranges as $range) {
+      $this->nodes[] = $this->drupalCreateNode(array(
+        'type' => $this->contentType,
+        $this->fieldName => array(
+          LANGUAGE_NONE => array($range),
+        ),
+      ));
+    }
+  }
+
+  /**
+   * Creates search server and index.
+   */
+  protected function createSearchServerAndIndex() {
+    // Create search server and index using DB service.
+    $server_values = array(
+      'name' => 'test_server',
+      'machine_name' => 'test_server',
+      'class' => 'search_api_db_service',
+      'options' => array(
+        'database' => 'default:default',
+      ),
+    );
+    search_api_server_insert($server_values);
+
+    $index_values = array(
+      'name' => 'test_index',
+      'machine_name' => 'test_index',
+      'server' => 'test_server',
+      'item_type' => 'node',
+      'options' => array(
+        'index_directly' => TRUE,
+        'fields' => array(
+          'field_range_integer:from' => array(
+            'type' => 'integer',
+          ),
+          'field_range_integer:to' => array(
+            'type' => 'integer',
+          ),
+          'search_api_language' => array(
+            'type' => 'string',
+          ),
+        ),
+      ),
+    );
+    $index_id = search_api_index_insert($index_values);
+    $index = search_api_index_load($index_id);
+    search_api_index_items($index);
+
+    // Search API returns result with a different column keys.
+    $this->map = array('entity' => 'nid');
+  }
+
+}

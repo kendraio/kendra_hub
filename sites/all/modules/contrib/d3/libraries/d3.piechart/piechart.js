@@ -14,16 +14,13 @@
 (function($) {
 
   Drupal.d3.piechart = function (select, settings) {
-
     var wedges = settings.rows,
       // Each wedge has a label and a value
       key = wedges.map(function(d) { return String(d[0]); }),
       // Padding is top, right, bottom, left as in css padding.
       p = [10, 50, 15, 15],
-      //w = 700,
-      //h = 400,
-      w = settings.width,
-      h = settings.height,
+      w = 700,
+      h = 400,
       // Chart diameter is w or h, (whichever is smaller) - padding.
       radius = Math.min((w - p[1] - p[3]), (h - p[0] - p[2])) / 2,
       // Maximum width and height for the legend minus padding.

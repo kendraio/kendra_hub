@@ -1,0 +1,13 @@
+name = Range Content Migrate
+description = Migrate range fields and field data from CCK D6 format to the D7 field format. Required to migrate data, can be disabled once all fields have been migrated.
+package = CCK
+core = 7.x
+dependencies[] = content_migrate
+dependencies[] = range
+
+; Information added by Drupal.org packaging script on 2016-10-04
+version = "7.x-1.7"
+core = "7.x"
+project = "range"
+datestamp = "1475599141"
+

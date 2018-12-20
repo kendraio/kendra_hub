@@ -5,6 +5,9 @@
  * Defines range field types.
  */
 
+// Include i18n.
+require_once 'range.i18n.inc';
+
 /**
  * Implements hook_field_info().
  */
@@ -12,18 +15,28 @@ function range_field_info() {
   $instance_settings = array(
     'min' => '',
     'max' => '',
+    'field' => array(
+      'prefix' => '',
+      'suffix' => '',
+    ),
     'from' => array(
+      'label' => t('From'),
       'prefix' => '',
       'suffix' => '',
     ),
     'to' => array(
+      'label' => t('to'),
+      'prefix' => '',
+      'suffix' => '',
+    ),
+    'combined' => array(
       'prefix' => '',
       'suffix' => '',
     ),
   );
   return array(
     'range_integer' => array(
-      'label' => t('Integer range'),
+      'label' => t('Range: integer'),
       'description' => t('This field stores a range in the database as an integer.'),
       'instance_settings' => $instance_settings,
       'default_widget' => 'range',
@@ -32,7 +45,7 @@ function range_field_info() {
       'property_callbacks' => array('range_metadata_field_range_callback'),
     ),
     'range_decimal' => array(
-      'label' => t('Decimal range'),
+      'label' => t('Range: decimal'),
       'description' => t('This field stores a range in the database in a fixed decimal format.'),
       'settings' => array(
         'precision' => 10,
@@ -46,7 +59,7 @@ function range_field_info() {
       'property_callbacks' => array('range_metadata_field_range_callback'),
     ),
     'range_float' => array(
-      'label' => t('Float range'),
+      'label' => t('Range: float'),
       'description' => t('This field stores a range in the database in a floating point format.'),
       'settings' => array(
         'decimal_separator' => '.',
@@ -67,7 +80,7 @@ function range_field_settings_form($field, $instance, $has_data) {
   $settings = $field['settings'];
   $form = array();
 
-  if ($field['type'] == 'range_decimal') {
+  if ($field['type'] === 'range_decimal') {
     $form['precision'] = array(
       '#type' => 'select',
       '#title' => t('Precision'),
@@ -85,7 +98,7 @@ function range_field_settings_form($field, $instance, $has_data) {
       '#disabled' => $has_data,
     );
   }
-  if ($field['type'] == 'range_decimal' || $field['type'] == 'range_float') {
+  if ($field['type'] === 'range_decimal' || $field['type'] === 'range_float') {
     $form['decimal_separator'] = array(
       '#type' => 'select',
       '#title' => t('Decimal marker'),
@@ -119,30 +132,39 @@ function range_field_instance_settings_form($field, $instance) {
     '#element_validate' => array('element_validate_number'),
   );
 
-  _range_field_instance_settings_form_prefix_suffix($form, t('FROM'), 'from', $settings);
-  _range_field_instance_settings_form_prefix_suffix($form, t('TO'), 'to', $settings);
+  _range_field_instance_subelements_settings_form($form, 'from', $settings);
+  _range_field_instance_subelements_settings_form($form, 'to', $settings);
+  _range_field_instance_subelements_settings_form($form, 'field', $settings);
+  _range_field_instance_subelements_settings_form($form, 'combined', $settings);
 
   return $form;
 }
 
 /**
- * Helper function. Builds settings fieldsets for the FROM/TO values.
+ * Helper function. Builds settings fieldsets for the FROM/TO subelements.
  *
  * @param array $form
- *  Instance settings form definition array.
- * @param string $title
- *  Fieldset title.
+ *   Instance settings form definition array.
  * @param string $name
- *  Form element machine name.
+ *   Form element machine name.
  * @param array $settings
- *  Field instance settings.
+ *   Field instance settings.
  */
-function _range_field_instance_settings_form_prefix_suffix(&$form, $title, $name, $settings) {
+function _range_field_instance_subelements_settings_form(array &$form, $name, array $settings) {
   $form[$name] = array(
     '#type' => 'fieldset',
-    '#title' => $title,
+    '#title' => drupal_ucfirst($name) . ' value',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
   );
-
+  if ($name === 'from' || $name === 'to') {
+    $form[$name]['label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Form element label'),
+      '#default_value' => $settings[$name]['label'],
+      '#description' => t('Defines label for form element.'),
+    );
+  }
   $form[$name]['prefix'] = array(
     '#type' => 'textfield',
     '#title' => t('Prefix'),
@@ -169,6 +191,8 @@ function _range_field_instance_settings_form_prefix_suffix(&$form, $title, $name
  * - 'range_from_greater_than_to': FROM value is greater than TO value.
  */
 function range_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  $instance = range_translate_field_instance($instance);
+
   foreach ($items as $delta => $item) {
     if ($item['from'] !== '' && $item['to'] === '' || $item['from'] === '' && $item['to'] !== '') {
       $errors[$field['field_name']][$langcode][$delta][] = array(
@@ -203,7 +227,7 @@ function range_field_validate($entity_type, $entity, $field, $instance, $langcod
  * Implements hook_field_presave().
  */
 function range_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
-  if ($field['type'] == 'range_decimal') {
+  if ($field['type'] === 'range_decimal') {
     // Let PHP round the value to ensure consistent behavior across storage
     // backends.
     foreach ($items as $delta => $item) {
@@ -231,47 +255,53 @@ function range_field_is_empty($item, $field) {
  * Implements hook_field_formatter_info().
  */
 function range_field_formatter_info() {
+  $base_settings = array(
+    'range_combine' => FALSE,
+    'range_separator' => '-',
+    'from_prefix_suffix' => TRUE,
+    'to_prefix_suffix' => TRUE,
+    'field_prefix_suffix' => TRUE,
+    'combined_prefix_suffix' => FALSE,
+  );
+
+  $base_number_format_settings = array(
+    'thousand_separator' => ' ',
+    'decimal_separator' => '.',
+  );
+
   return array(
-    // The 'Default' formatter is different for integer fields on the one hand,
-    // and for decimal and float fields on the other hand, in order to be able
-    // to use different default values for the settings.
     'range_integer' => array(
       'label' => t('Default'),
       'field types' => array('range_integer'),
-      'settings' => array(
-        'range_combine' => FALSE,
-        'range_separator' => '-',
-        'thousand_separator' => ' ',
-        // The 'decimal_separator' and 'scale' settings are not configurable
-        // through the UI, and will therefore keep their default values. They
-        // are only present so that the 'range_integer' and 'range_decimal'
-        // formatters can use the same code.
-        'decimal_separator' => '.',
+      'settings' => $base_settings + $base_number_format_settings + array(
         'scale' => 0,
-        'from_prefix_suffix' => TRUE,
-        'to_prefix_suffix' => TRUE,
       ),
     ),
     'range_decimal' => array(
       'label' => t('Default'),
       'field types' => array('range_decimal', 'range_float'),
-      'settings' => array(
-        'range_combine' => FALSE,
-        'range_separator' => '-',
-        'thousand_separator' => ' ',
-        'decimal_separator' => '.',
+      'settings' => $base_settings + $base_number_format_settings + array(
         'scale' => 2,
-        'from_prefix_suffix' => TRUE,
-        'to_prefix_suffix' => TRUE,
+      ),
+    ),
+    'range_integer_sprintf' => array(
+      'label' => t('Formatted string'),
+      'field types' => array('range_integer'),
+      'settings' => $base_settings + array(
+        'format_string' => '%d',
+      ),
+    ),
+    'range_decimal_sprintf' => array(
+      'label' => t('Formatted string'),
+      'field types' => array('range_decimal', 'range_float'),
+      'settings' => $base_settings + array(
+        'format_string' => '%.2f',
       ),
     ),
     'range_unformatted' => array(
       'label' => t('Unformatted'),
       'field types' => array('range_integer', 'range_decimal', 'range_float'),
-      'settings' => array(
-        'range_combine' => FALSE,
-        'range_separator' => '-',
-      ),
+      'settings' => $base_settings,
     ),
   );
 }
@@ -283,59 +313,98 @@ function range_field_formatter_settings_form($field, $instance, $view_mode, $for
   $display = $instance['display'][$view_mode];
   $settings = $display['settings'];
 
-  $element['range_separator'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Range separator.'),
-    '#default_value' => $settings['range_separator'],
-  );
-  if ($display['type'] == 'range_decimal' || $display['type'] == 'range_integer') {
-    $options = array(
-      '' => t('<none>'),
-      '.' => t('Decimal point'),
-      ',' => t('Comma'),
-      ' ' => t('Space'),
-    );
+  $element = array();
+
+  if ($display['type'] === 'range_decimal' || $display['type'] === 'range_integer') {
     $element['thousand_separator'] = array(
       '#type' => 'select',
       '#title' => t('Thousand marker'),
-      '#options' => $options,
+      '#options' => array(
+        '' => t('<none>'),
+        '.' => t('Decimal point'),
+        ',' => t('Comma'),
+        ' ' => t('Space'),
+      ),
       '#default_value' => $settings['thousand_separator'],
     );
-
-    if ($display['type'] == 'range_decimal') {
-      $element['decimal_separator'] = array(
-        '#type' => 'select',
-        '#title' => t('Decimal marker'),
-        '#options' => array('.' => t('Decimal point'), ',' => t('Comma')),
-        '#default_value' => $settings['decimal_separator'],
-      );
-      $element['scale'] = array(
-        '#type' => 'select',
-        '#title' => t('Scale'),
-        '#options' => drupal_map_assoc(range(0, 10)),
-        '#default_value' => $settings['scale'],
-        '#description' => t('The number of digits to the right of the decimal.'),
-      );
-    }
-    $element['range_combine'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Combine equivalent values'),
-      '#description' => t('If the FROM and TO values are equal, combine the display into a single value.'),
-      '#default_value' => $settings['range_combine'],
+  }
+  if ($display['type'] === 'range_decimal') {
+    $element['decimal_separator'] = array(
+      '#type' => 'select',
+      '#title' => t('Decimal marker'),
+      '#options' => array(
+        '.' => t('Decimal point'),
+        ',' => t('Comma'),
+        ', ' => t('Comma and space'),
+      ),
+      '#default_value' => $settings['decimal_separator'],
     );
-    $element['from_prefix_suffix'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Display <em>FROM value</em> prefix and suffix.'),
-      '#default_value' => $settings['from_prefix_suffix'],
-    );
-    $element['to_prefix_suffix'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Display <em>TO value</em> prefix and suffix.'),
-      '#default_value' => $settings['to_prefix_suffix'],
+    $element['scale'] = array(
+      '#type' => 'select',
+      '#title' => t('Scale'),
+      '#options' => drupal_map_assoc(range(0, 10)),
+      '#default_value' => $settings['scale'],
+      '#description' => t('The number of digits to the right of the decimal.'),
     );
   }
+  if ($display['type'] === 'range_integer_sprintf' || $display['type'] === 'range_decimal_sprintf') {
+    $element['format_string'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Format'),
+      '#description' => t('See <a href="!url">PHP documentation</a> for a description of format. <strong>Due to PHP limitations, thousand separator cannot be used.</strong>', array('!url' => 'http://php.net/manual/en/function.sprintf.php')),
+      '#default_value' => $settings['format_string'],
+    );
+  }
+  _range_field_formatter_base_settings_form($element, $settings, $field['field_name']);
 
   return $element;
+}
+
+/**
+ * Helper function. Adds formatter base settings to the form element.
+ *
+ * @param array $element
+ *   Form element.
+ * @param array $settings
+ *   Field formatter settings.
+ */
+function _range_field_formatter_base_settings_form(array &$element, array $settings, $field_name) {
+  $element['range_separator'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Range separator'),
+    '#default_value' => $settings['range_separator'],
+  );
+  $element['range_combine'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Combine equivalent values'),
+    '#description' => t('If the FROM and TO values are equal, combine the display into a single value.'),
+    '#default_value' => $settings['range_combine'],
+  );
+  $element['from_prefix_suffix'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display <em>FROM value</em> prefix and suffix'),
+    '#default_value' => $settings['from_prefix_suffix'],
+  );
+  $element['to_prefix_suffix'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display <em>TO value</em> prefix and suffix'),
+    '#default_value' => $settings['to_prefix_suffix'],
+  );
+  $element['field_prefix_suffix'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display <em>FIELD value</em> prefix and suffix'),
+    '#default_value' => $settings['field_prefix_suffix'],
+  );
+  $element['combined_prefix_suffix'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display <em>COMBINED value</em> prefix and suffix'),
+    '#default_value' => $settings['combined_prefix_suffix'],
+    '#states' => array(
+      'visible' => array(
+        ':input[name="fields[' . $field_name . '][settings_edit_form][settings][range_combine]"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
 }
 
 /**
@@ -346,22 +415,38 @@ function range_field_formatter_settings_summary($field, $instance, $view_mode) {
   $settings = $display['settings'];
 
   $summary = array();
-  if ($display['type'] == 'range_decimal' || $display['type'] == 'range_integer') {
-    $from = number_format(1234.1234567890, $settings['scale'], $settings['decimal_separator'], $settings['thousand_separator']);
-    $to = number_format(4321.0987654321, $settings['scale'], $settings['decimal_separator'], $settings['thousand_separator']);
-    $summary[] = $from . $settings['range_separator'] . $to;
-    if ($settings['range_combine']) {
-      $summary[] = t('Equivalent values will be combined into a single value.');
-    }
-    if ($settings['from_prefix_suffix']) {
-      $summary[] = t('Display with <em>FROM value</em> prefix and suffix.');
-    }
-    if ($settings['to_prefix_suffix']) {
-      $summary[] = t('Display with <em>TO value</em> prefix and suffix.');
-    }
-  }
+  $from = _range_number_format(1234.1234567890, $display['type'], $settings);
+  $to = _range_number_format(4321.0987654321, $display['type'], $settings);
+  $summary[] = $from . field_filter_xss($settings['range_separator']) . $to;
+  _range_field_formatter_base_settings_summary($summary, $settings);
 
   return implode('<br />', $summary);
+}
+
+/**
+ * Helper function. Returns summary for formatter base settings.
+ *
+ * @param array $summary
+ *   Formatter summary.
+ * @param array $settings
+ *   Field formatter settings.
+ */
+function _range_field_formatter_base_settings_summary(array &$summary, array $settings) {
+  if ($settings['range_combine']) {
+    $summary[] = t('Equivalent values will be combined into a single value.');
+  }
+  if ($settings['from_prefix_suffix']) {
+    $summary[] = t('Display with <em>FROM value</em> prefix and suffix.');
+  }
+  if ($settings['to_prefix_suffix']) {
+    $summary[] = t('Display with <em>TO value</em> prefix and suffix.');
+  }
+  if ($settings['field_prefix_suffix']) {
+    $summary[] = t('Display with <em>FIELD value</em> prefix and suffix.');
+  }
+  if ($settings['range_combine'] && $settings['combined_prefix_suffix']) {
+    $summary[] = t('Display with <em>COMBINED value</em> prefix and suffix.');
+  }
 }
 
 /**
@@ -370,119 +455,146 @@ function range_field_formatter_settings_summary($field, $instance, $view_mode) {
 function range_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
   $element = array();
   $settings = $display['settings'];
+  $instance = range_translate_field_instance($instance);
 
-  switch ($display['type']) {
-    case 'range_integer':
-    case 'range_decimal':
-      foreach ($items as $delta => $item) {
-        $from_value = number_format($item['from'], $settings['scale'], $settings['decimal_separator'], $settings['thousand_separator']);
-        $to_value = number_format($item['to'], $settings['scale'], $settings['decimal_separator'], $settings['thousand_separator']);
+  foreach ($items as $delta => $item) {
+    $from_value = _range_number_format($item['from'], $display['type'], $settings);
+    $to_value = _range_number_format($item['to'], $display['type'], $settings);
 
-        // Combine values if they are equal.
-        if (!empty($settings['range_combine']) && $from_value === $to_value) {
-          $output = _range_field_formatter_view_combined_value($from_value, $settings, $instance['settings']);
-        }
-        else {
-          $output = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance['settings']);
-        }
+    // Combine values if they are equal.
+    if (!empty($settings['range_combine']) && $from_value === $to_value) {
+      $output = _range_field_formatter_view_combined_value($from_value, $settings, $instance['settings']);
+    }
+    else {
+      $output = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance['settings']);
+    }
 
-        $element[$delta] = array('#markup' => $output);
-      }
-      break;
+    // Add field prefix/suffix.
+    $output = _range_field_formatter_view_prefix_suffix($output, $settings['field_prefix_suffix'], $instance['settings']['field']);
 
-    case 'range_unformatted':
-      foreach ($items as $delta => $item) {
-        $element[$delta] = array('#markup' => $item['from'] . $settings['range_separator'] . $item['to']);
-      }
-      break;
+    $element[$delta] = array('#markup' => $output);
   }
 
   return $element;
 }
 
 /**
- * Helper function. Decides what prefix/suffix use for combined value and
- * returns field markup.
+ * Helper function. Formats a number according to formatter settings.
  *
- * FROM and TO might have different prefixes/suffixes.
- * Code below decides which one to use, based on the following:
- *   1. If both are disabled - show naked value
- *   2. If either FROM or TO are enabled - show prefix/suffix of the
- *      enabled one
- *   3. If both are enabled, show prefix from FROM and suffix from TO
- *
- * @param string $value
- *  Field value.
+ * @param int|double $number
+ *   Number to format.
+ * @param string $display_type
+ *   Formatter being used.
  * @param array $settings
- *  Display settings array.
- * @param array $instance_settings
- *  Field instance settings array.
+ *   Array of formatter settings:
+ *     - format_string: format string for sprintf() function
+ *     - scale: number scale
+ *     - decimal_separator: string, used as a decimal separator
+ *     - thousand_separator: string, used as a thousand separator.
+ *
  * @return string
- *  Field markup.
+ *   Formatted number.
  */
-function _range_field_formatter_view_combined_value($value, $settings, $instance_settings) {
-  $output = '';
+function _range_number_format($number, $display_type, array $settings) {
+  switch ($display_type) {
+    case 'range_integer':
+    case 'range_decimal':
+      return (string) number_format($number, $settings['scale'], $settings['decimal_separator'], $settings['thousand_separator']);
 
-  $from_prefix_suffix = !empty($settings['from_prefix_suffix']);
-  $to_prefix_suffix = !empty($settings['to_prefix_suffix']);
+    case 'range_integer_sprintf':
+    case 'range_decimal_sprintf':
+      return (string) sprintf(field_filter_xss($settings['format_string']), $number);
 
-  // Option #1: both are disabled.
-  if (empty($from_prefix_suffix) && empty($to_prefix_suffix)) {
-    $output = $value;
+    default:
+      return (string) $number;
   }
-  // Option #2a: FROM is enabled.
-  elseif (!empty($from_prefix_suffix) && empty($to_prefix_suffix)) {
-    $output = _range_field_formatter_view_prefix_suffix($value, TRUE, $instance_settings['from']);
-  }
-  // Option #2b: TO is enabled.
-  elseif (empty($from_prefix_suffix) && !empty($to_prefix_suffix)) {
-    $output = _range_field_formatter_view_prefix_suffix($value, TRUE, $instance_settings['to']);
-  }
-  // Option #3: both are enabled.
-  else {
-    $prefix = isset($instance_settings['from']['prefix']) ? field_filter_xss($instance_settings['from']['prefix']) : '';
-    $suffix = isset($instance_settings['to']['suffix']) ? field_filter_xss($instance_settings['to']['suffix']) : '';
-    return $prefix . $value . $suffix;
-  }
-
-  return $output;
 }
 
 /**
- * Helper function. Adds prefixes/suffixes for the field value and
- * returns field markup.
+ * Helper function. Returns field markup for combined value option.
+ *
+ * FROM and TO might have different prefixes/suffixes.
+ * Code below decides which one to use, based on the following:
+ *   - If COMBINED is enabled - show it
+ *   - If COMBINED is disabled and both FROM/TO are disabled - show naked value
+ *   - If COMBINED is disabled and either FROM or TO are enabled - show
+ *     prefix/suffix of the enabled one
+ *   - If COMBINED is disabled and both FROM/TO are enabled, show prefix from
+ *     FROM and suffix from TO
+ *
+ * @param string $value
+ *   Field value.
+ * @param array $settings
+ *   Display settings array.
+ * @param array $instance_settings
+ *   Field instance settings array.
+ *
+ * @return string
+ *   Field markup.
+ */
+function _range_field_formatter_view_combined_value($value, array $settings, array $instance_settings) {
+  $from_prefix_suffix = !empty($settings['from_prefix_suffix']);
+  $to_prefix_suffix = !empty($settings['to_prefix_suffix']);
+  $combined_prefix_suffix = !empty($settings['combined_prefix_suffix']);
+
+  // Option #0: COMBINED is enabled.
+  if ($combined_prefix_suffix) {
+    return _range_field_formatter_view_prefix_suffix($value, TRUE, $instance_settings['combined']);
+  }
+  // Option #1: COMBINED is disabled and both FROM/TO are disabled as well.
+  elseif (empty($from_prefix_suffix) && empty($to_prefix_suffix)) {
+    return $value;
+  }
+  // Option #2a: COMBINED is disabled and FROM is enabled.
+  elseif (!empty($from_prefix_suffix) && empty($to_prefix_suffix)) {
+    return _range_field_formatter_view_prefix_suffix($value, TRUE, $instance_settings['from']);
+  }
+  // Option #2b: COMBINED is disabled and TO is enabled.
+  elseif (empty($from_prefix_suffix) && !empty($to_prefix_suffix)) {
+    return _range_field_formatter_view_prefix_suffix($value, TRUE, $instance_settings['to']);
+  }
+  // Option #3:COMBINED is disabled and both FROM/TO are enabled.
+  else {
+    return _range_field_formatter_view_prefix_suffix($value, TRUE, array('prefix' => $instance_settings['from']['prefix'], 'suffix' => $instance_settings['to']['suffix']));
+  }
+}
+
+/**
+ * Helper function. Returns field markup for separate values option.
  *
  * @param string $from_value
- *  Field FROM value.
+ *   Field FROM value.
  * @param string $to_value
- *  Field TO value.
+ *   Field TO value.
  * @param array $settings
- *  Display settings array.
+ *   Display settings array.
  * @param array $instance_settings
- *  Field instance settings array.
+ *   Field instance settings array.
+ *
  * @return string
- *  Field markup.
+ *   Field markup.
  */
-function _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance_settings) {
+function _range_field_formatter_view_separate_values($from_value, $to_value, array $settings, array $instance_settings) {
   $from = _range_field_formatter_view_prefix_suffix($from_value, $settings['from_prefix_suffix'], $instance_settings['from']);
   $to = _range_field_formatter_view_prefix_suffix($to_value, $settings['to_prefix_suffix'], $instance_settings['to']);
 
-  return $from . $settings['range_separator'] . $to;
+  return $from . field_filter_xss($settings['range_separator']) . $to;
 }
 
 /**
  * Helper function. Adds prefix and suffix to the given range field value.
  *
  * @param string $value
- *  FROM/TO range field value.
- * @param boolean $display_prefix
- *  Whether to add suffix/prefix or not.
+ *   FROM/TO range field value.
+ * @param bool $display_prefix
+ *   Whether to add suffix/prefix or not.
  * @param array $instance_settings
- *  Field instance FROM/TO value settings.
+ *   Field instance FROM/TO value settings.
+ *
  * @return string
- *  Range field value with added prefix/suffix.
+ *   Range field value with added prefix/suffix.
  */
-function _range_field_formatter_view_prefix_suffix($value, $display_prefix, $instance_settings) {
+function _range_field_formatter_view_prefix_suffix($value, $display_prefix, array $instance_settings) {
   if ($display_prefix) {
     $prefix = isset($instance_settings['prefix']) ? field_filter_xss($instance_settings['prefix']) : '';
     $suffix = isset($instance_settings['suffix']) ? field_filter_xss($instance_settings['suffix']) : '';
@@ -508,10 +620,12 @@ function range_field_widget_info() {
  * Implements hook_field_widget_form().
  */
 function range_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $instance = range_translate_field_instance($instance);
+  $settings = $instance['settings'];
   $from = isset($items[$delta]['from']) ? $items[$delta]['from'] : '';
   $to = isset($items[$delta]['to']) ? $items[$delta]['to'] : '';
   // Substitute the decimal separator.
-  if ($field['type'] == 'range_decimal' || $field['type'] == 'range_float') {
+  if ($field['type'] === 'range_decimal' || $field['type'] === 'range_float') {
     $from = strtr($from, '.', $field['settings']['decimal_separator']);
     $to = strtr($to, '.', $field['settings']['decimal_separator']);
   }
@@ -522,7 +636,7 @@ function range_field_widget_form(&$form, &$form_state, $field, $instance, $langc
   }
 
   $element += array(
-    // Extract the number type from the field type name for easier validation.
+    // Extract the range type from the field type name for easier validation.
     '#range_type' => str_replace('range_', '', $field['type']),
   );
 
@@ -530,27 +644,33 @@ function range_field_widget_form(&$form, &$form_state, $field, $instance, $langc
     '#type' => 'textfield',
     // Allow a slightly larger size that the field length to allow for some
     // configurations where all characters won't fit in input field.
-    '#size' => $field['type'] == 'range_decimal' ? $field['settings']['precision'] + 4 : 12,
+    '#size' => $field['type'] === 'range_decimal' ? $field['settings']['precision'] + 4 : 12,
     // Allow two extra characters for signed values and decimal separator.
-    '#maxlength' => $field['type'] == 'range_decimal' ? $field['settings']['precision'] + 2 : 10,
+    '#maxlength' => $field['type'] === 'range_decimal' ? $field['settings']['precision'] + 2 : 10,
     '#required' => $element['#required'],
   );
 
   $element['from'] = array(
-    '#title' => t('From'),
+    '#title' => $settings['from']['label'],
     '#default_value' => $from,
     '#prefix' => '<div class="field-values-wrapper clearfix">',
-          ) + $base;
+  ) + $base;
 
   $element['to'] = array(
-    '#title' => t('to'),
+    '#title' => $settings['to']['label'],
     '#default_value' => $to,
     '#suffix' => '</div>',
-          ) + $base;
+  ) + $base;
 
   // Add prefixes and suffixes.
-  _range_field_widget_form_subelement_prefix_suffix($element, 'from', $instance['settings']);
-  _range_field_widget_form_subelement_prefix_suffix($element, 'to', $instance['settings']);
+  if (!empty($settings['field']['prefix'])) {
+    $settings['from']['prefix'] = $settings['field']['prefix'] . $settings['from']['prefix'];
+  }
+  if (!empty($settings['field']['suffix'])) {
+    $settings['to']['suffix'] .= $settings['field']['suffix'];
+  }
+  _range_field_widget_form_subelement_prefix_suffix($element, 'from', $settings);
+  _range_field_widget_form_subelement_prefix_suffix($element, 'to', $settings);
 
   $element['#element_validate'][] = 'range_field_widget_validate';
 
@@ -560,17 +680,16 @@ function range_field_widget_form(&$form, &$form_state, $field, $instance, $langc
 }
 
 /**
- * Helper function. Adds prefix and suffix to a range field widget FROM/TO
- * subelements.
+ * Helper function. Adds prefix and suffix to a range field widget subelements.
  *
  * @param array $element
- *  Range field widget definition array.
+ *   Range field widget definition array.
  * @param string $name
- *  Form element machine name.
+ *   Form element machine name.
  * @param array $settings
- *  Field instance settings.
+ *   Field instance settings.
  */
-function _range_field_widget_form_subelement_prefix_suffix(&$element, $name, $settings) {
+function _range_field_widget_form_subelement_prefix_suffix(array &$element, $name, array $settings) {
   if (!empty($settings[$name]['prefix'])) {
     $prefix = field_filter_xss($settings[$name]['prefix']);
     $element[$name]['#field_prefix'] = $prefix;
@@ -605,27 +724,30 @@ function range_field_widget_validate_subelement($subelement, $element, &$form_st
     switch ($type) {
       case 'float':
       case 'decimal':
+        $message_args = array(
+          '%field' => $element['#title'],
+          '@separator' => $field['settings']['decimal_separator'],
+        );
         $regexp = '@([^-0-9\\' . $field['settings']['decimal_separator'] . '])|(.-)@';
-        $message = t('Only numbers and the decimal separator (@separator) allowed in %field.', array('%field' => $instance['label'], '@separator' => $field['settings']['decimal_separator']));
+        $message = t('Only numbers and the decimal separator (@separator) allowed in %field.', $message_args);
         break;
 
       case 'integer':
+        $message_args = array(
+          '%field' => $element['#title'],
+        );
         $regexp = '@([^-0-9])|(.-)@';
-        $message = t('Only numbers are allowed in %field.', array('%field' => $instance['label']));
+        $message = t('Only numbers are allowed in %field.', $message_args);
         break;
     }
     if ($value != preg_replace($regexp, '', $value)) {
       form_error($element, $message);
     }
     else {
-      if ($type == 'decimal' || $type == 'float') {
+      if ($type === 'decimal' || $type === 'float') {
         // Verify that only one decimal separator exists in the field.
         if (substr_count($value, $field['settings']['decimal_separator']) > 1) {
-          $message = t('%field: There should only be one decimal separator (@separator).', array(
-            '%field' => t($instance['label']),
-            '@separator' => $field['settings']['decimal_separator'],
-                  )
-          );
+          $message = t('%field: There should only be one decimal separator (@separator).', $message_args);
           form_error($element, $message);
         }
         else {
@@ -669,7 +791,7 @@ function range_metadata_field_range_callback(&$info, $entity_type, $field, $inst
  * Defines info for the properties of the range field data structure.
  */
 function range_property_field_item_range_info($field) {
-  $type = $field['type'] == 'range_integer' ? 'integer' : 'decimal';
+  $type = $field['type'] === 'range_integer' ? 'integer' : 'decimal';
 
   $properties['from'] = array(
     'type' => $type,

@@ -43,31 +43,205 @@ function range_field_schema($field) {
 }
 
 /**
- * Converts existing field instances settings to support separate prefix and
- * suffix for the FROM and TO values.
+ * Helper function. Applies given callback for every field instance.
+ *
+ * Loops through all field instances. Executes given callback with each instance
+ * as a parameter.
+ *
+ * @param string $callback
+ *   Callback to execute for every field instance.
  */
-function range_update_7001() {
+function _range_update_instances($callback) {
   $instances = field_info_instances();
   foreach ($instances as $entity_type) {
     foreach ($entity_type as $bundle) {
       foreach ($bundle as $instance) {
-        if ($instance['widget']['type'] == 'range') {
-          if (!empty($instance['settings']['prefix'])) {
-            $instance['settings']['from']['prefix'] = $instance['settings']['prefix'];
-          }
-          if (!empty($instance['settings']['suffix'])) {
-            $instance['settings']['to']['suffix'] = $instance['settings']['suffix'];
-          }
-          unset($instance['settings']['prefix'], $instance['settings']['suffix']);
-
-          foreach (element_children($instance['display']) as $view_mode) {
-            $e = &$instance['display'][$view_mode]['settings'];
-            $e['from_prefix_suffix'] = $e['to_prefix_suffix'] = $e['prefix_suffix'];
-            unset($e['prefix_suffix']);
-          }
+        if (function_exists($callback) && $callback($instance)) {
           field_update_instance($instance);
         }
       }
     }
+  }
+}
+
+/**
+ * Updates range field instances' settings.
+ *
+ * Converts existing field instances settings to support separate prefix and
+ * suffix for the FROM and TO values.
+ */
+function range_update_7001() {
+  _range_update_instances('_range_update_instance_7001');
+}
+
+/**
+ * Instance update callback for 7001 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7001(array &$instance) {
+  if ($instance['widget']['type'] == 'range') {
+    if (!empty($instance['settings']['prefix'])) {
+      $instance['settings']['from']['prefix'] = $instance['settings']['prefix'];
+    }
+    if (!empty($instance['settings']['suffix'])) {
+      $instance['settings']['to']['suffix'] = $instance['settings']['suffix'];
+    }
+    unset($instance['settings']['prefix'], $instance['settings']['suffix']);
+
+    foreach (element_children($instance['display']) as $view_mode) {
+      $e = &$instance['display'][$view_mode]['settings'];
+      $e['from_prefix_suffix'] = $e['to_prefix_suffix'] = $e['prefix_suffix'];
+      unset($e['prefix_suffix']);
+    }
+    return TRUE;
+  }
+}
+
+/**
+ * Updates range field instances' settings.
+ */
+function range_update_7002() {
+  _range_update_instances('_range_update_instance_7002');
+}
+
+/**
+ * Instance update callback for 7002 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7002(array &$instance) {
+  if ($instance['widget']['type'] === 'range') {
+    $instance['settings']['from']['label'] = t('From');
+    $instance['settings']['to']['label'] = t('to');
+    return TRUE;
+  }
+}
+
+/**
+ * Updates range field instances' settings.
+ */
+function range_update_7003() {
+  _range_update_instances('_range_update_instance_7003');
+}
+
+/**
+ * Instance update callback for 7003 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7003(array &$instance) {
+  if ($instance['widget']['type'] === 'range') {
+    $instance['settings']['field'] = array('prefix' => '', 'suffix' => '');
+    return TRUE;
+  }
+}
+
+/**
+ * Updates range field formatters' settings.
+ */
+function range_update_7004() {
+  _range_update_instances('_range_update_instance_7004');
+}
+
+/**
+ * Instance update callback for 7004 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7004(array &$instance) {
+  $return = FALSE;
+  foreach ($instance['display'] as $view_mode => $display) {
+    if (in_array($display['type'], array('range_integer', 'range_decimal'))) {
+      $instance['display'][$view_mode]['settings'] += array(
+        'number_formatter' => 'number_format',
+        'format_string' => $display['type'] === 'range_integer' ? '%d' : '%.2f',
+      );
+      $return = TRUE;
+    }
+  }
+  return $return;
+}
+
+/**
+ * Introduces new field formatter.
+ */
+function range_update_7005() {
+  _range_update_instances('_range_update_instance_7005');
+}
+
+/**
+ * Instance update callback for 7005 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7005(array &$instance) {
+  $return = FALSE;
+  foreach ($instance['display'] as $view_mode => $display) {
+    if ($display['type'] === 'range_unformatted') {
+      $instance['display'][$view_mode]['settings'] += array(
+        'from_prefix_suffix' => FALSE,
+        'to_prefix_suffix' => FALSE,
+        'field_prefix_suffix' => FALSE,
+      );
+      $return = TRUE;
+    }
+
+    if (!empty($display['settings']['number_formatter']) && $display['settings']['number_formatter'] === 'sprintf') {
+      $instance['display'][$view_mode]['type'] = $display['type'] === 'range_integer' ? 'range_integer_sprintf' : 'range_decimal_sprintf';
+      unset($display['settings']['number_formatter'], $display['settings']['thousand_separator'], $display['settings']['decimal_separator'], $display['settings']['scale']);
+      $instance['display'][$view_mode]['settings'] = $display['settings'];
+      $return = TRUE;
+    }
+  }
+  return $return;
+}
+
+/**
+ * Updates range field instances' settings.
+ *
+ * Adds support of COMBINED prefix and suffix.
+ */
+function range_update_7006() {
+  _range_update_instances('_range_update_instance_7006');
+}
+
+/**
+ * Instance update callback for 7006 update.
+ *
+ * @param array $instance
+ *   Field instance.
+ *
+ * @return bool
+ *   Whether given instance was updated or not.
+ */
+function _range_update_instance_7006(array &$instance) {
+  if ($instance['widget']['type'] === 'range') {
+    $instance['settings']['combined'] = array('prefix' => '', 'suffix' => '');
+
+    foreach ($instance['display'] as $view_mode => $display) {
+      $instance['display'][$view_mode]['settings']['combined_prefix_suffix'] = FALSE;
+    }
+    return TRUE;
   }
 }

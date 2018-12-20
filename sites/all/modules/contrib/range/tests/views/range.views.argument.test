@@ -1,0 +1,194 @@
+<?php
+
+/**
+ * @file
+ * Contains range views argument handler test class.
+ */
+
+/**
+ * Tests range views argument handler.
+ */
+class RangeViewsArgumentTestCase extends RangeViewsBaseTestCase {
+
+  /**
+   * Meta information about tests.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Views argument',
+      'description' => 'Tests range views argument handler.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * Tests range field views argument.
+   */
+  public function testRangeFieldViewsArgument() {
+    $view = $this->getRangeFieldViewsArgumentTestView();
+    $this->_testRangeViewsArgument($view);
+  }
+
+  /**
+   * Tests range search API views argument.
+   */
+  public function testRangeSearchApiViewsArgument() {
+    $this->createSearchServerAndIndex();
+    $view = $this->getRangeSearchApiViewsArgumentTestView();
+    $this->_testRangeViewsArgument($view);
+  }
+
+  /**
+   * Range views argument test runner.
+   */
+  protected function _testRangeViewsArgument($view) {
+    // Range contains, exclude endpoints.
+    $view->set_display('default');
+    $view->init_handlers();
+    $view->argument[$this->fieldName]->options['operator'] = 'within';
+    $view->argument[$this->fieldName]->options['include_endpoints'] = FALSE;
+    $this->executeView($view, array(5));
+    $expected_result = array(
+      array('nid' => $this->nodes[0]->nid),
+      array('nid' => $this->nodes[2]->nid),
+    );
+    $this->assertIdenticalResultset($view, $expected_result, $this->map, 'Range views argument (contains, exclude endpoints) produces correct results');
+    $view->destroy();
+
+    // Range contains, include endpoints.
+    $view->set_display('default');
+    $view->init_handlers();
+    $view->argument[$this->fieldName]->options['operator'] = 'within';
+    $view->argument[$this->fieldName]->options['include_endpoints'] = TRUE;
+    $this->executeView($view, array(5));
+    $expected_result = array(
+      array('nid' => $this->nodes[0]->nid),
+      array('nid' => $this->nodes[1]->nid),
+      array('nid' => $this->nodes[2]->nid),
+    );
+    $this->assertIdenticalResultset($view, $expected_result, $this->map, 'Range views argument (contains, include endpoints) produces correct results');
+    $view->destroy();
+
+    // Range does contains, exclude endpoints.
+    $view->set_display('default');
+    $view->init_handlers();
+    $view->argument[$this->fieldName]->options['operator'] = 'not within';
+    $view->argument[$this->fieldName]->options['include_endpoints'] = FALSE;
+    $this->executeView($view, array(5));
+    $expected_result = array(
+      array('nid' => $this->nodes[1]->nid),
+      array('nid' => $this->nodes[3]->nid),
+    );
+    $this->assertIdenticalResultset($view, $expected_result, $this->map, 'Range views argument (does not contain, exclude endpoints) produces correct results');
+    $view->destroy();
+
+    // Range does contains, include endpoints.
+    $view->set_display('default');
+    $view->init_handlers();
+    $view->argument[$this->fieldName]->options['operator'] = 'not within';
+    $view->argument[$this->fieldName]->options['include_endpoints'] = TRUE;
+    $this->executeView($view, array(5));
+    $expected_result = array(
+      array('nid' => $this->nodes[3]->nid),
+    );
+    $this->assertIdenticalResultset($view, $expected_result, $this->map, 'Range views argument (does not contain, include endpoints) produces correct results');
+    $view->destroy();
+  }
+
+  /**
+   * Returns view for testing range field views argument.
+   *
+   * @return view
+   *   View object.
+   */
+  protected function getRangeFieldViewsArgumentTestView() {
+    $view = new view();
+    $view->name = 'test_range_argument';
+    $view->description = '';
+    $view->tag = 'default';
+    $view->base_table = 'node';
+    $view->human_name = 'test_range_argument';
+    $view->core = 7;
+    $view->api_version = '3.0';
+    $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+
+    /* Display: Master */
+    $handler = $view->new_display('default', 'Master', 'default');
+    $handler->display->display_options['use_more_always'] = FALSE;
+    $handler->display->display_options['access']['type'] = 'none';
+    $handler->display->display_options['cache']['type'] = 'none';
+    $handler->display->display_options['query']['type'] = 'views_query';
+    $handler->display->display_options['exposed_form']['type'] = 'basic';
+    $handler->display->display_options['pager']['type'] = 'full';
+    $handler->display->display_options['style_plugin'] = 'default';
+    $handler->display->display_options['row_plugin'] = 'fields';
+    /* Field: Indexed Node: Node ID */
+    $handler->display->display_options['fields']['nid']['id'] = 'nid';
+    $handler->display->display_options['fields']['nid']['table'] = 'node';
+    $handler->display->display_options['fields']['nid']['field'] = 'nid';
+    $handler->display->display_options['fields']['nid']['label'] = '';
+    $handler->display->display_options['fields']['nid']['element_label_colon'] = FALSE;
+    $handler->display->display_options['fields']['nid']['link_to_entity'] = 0;
+    /* Contextual filter: Content: Range integer range argument */
+    $handler->display->display_options['arguments']['field_range_integer']['id'] = 'field_range_integer';
+    $handler->display->display_options['arguments']['field_range_integer']['table'] = 'field_data_field_range_integer';
+    $handler->display->display_options['arguments']['field_range_integer']['field'] = 'field_range_integer';
+    $handler->display->display_options['arguments']['field_range_integer']['default_argument_type'] = 'fixed';
+    $handler->display->display_options['arguments']['field_range_integer']['summary']['number_of_records'] = '0';
+    $handler->display->display_options['arguments']['field_range_integer']['summary']['format'] = 'default_summary';
+    $handler->display->display_options['arguments']['field_range_integer']['summary_options']['items_per_page'] = '25';
+
+    return $view;
+  }
+
+  /**
+   * Returns view for testing range search API views argument.
+   *
+   * @return view
+   *   View object.
+   */
+  protected function getRangeSearchApiViewsArgumentTestView() {
+    $view = new view();
+    $view->name = 'test_range_search_api_argument';
+    $view->description = '';
+    $view->tag = 'default';
+    $view->base_table = 'search_api_index_test_index';
+    $view->human_name = 'test_range_search_api_argument';
+    $view->core = 7;
+    $view->api_version = '3.0';
+    $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+
+    /* Display: Master */
+    $handler = $view->new_display('default', 'Master', 'default');
+    $handler->display->display_options['use_more_always'] = FALSE;
+    $handler->display->display_options['access']['type'] = 'none';
+    $handler->display->display_options['cache']['type'] = 'none';
+    $handler->display->display_options['query']['type'] = 'views_query';
+    $handler->display->display_options['exposed_form']['type'] = 'basic';
+    $handler->display->display_options['pager']['type'] = 'full';
+    $handler->display->display_options['style_plugin'] = 'default';
+    $handler->display->display_options['row_plugin'] = 'fields';
+    /* Field: Indexed Node: Node ID */
+    $handler->display->display_options['fields']['nid']['id'] = 'nid';
+    $handler->display->display_options['fields']['nid']['table'] = 'search_api_index_test_index';
+    $handler->display->display_options['fields']['nid']['field'] = 'nid';
+    $handler->display->display_options['fields']['nid']['label'] = '';
+    $handler->display->display_options['fields']['nid']['element_label_colon'] = FALSE;
+    $handler->display->display_options['fields']['nid']['link_to_entity'] = 0;
+    /* Sort criterion: Indexed Node: Entity ID */
+    $handler->display->display_options['sorts']['search_api_id']['id'] = 'search_api_id';
+    $handler->display->display_options['sorts']['search_api_id']['table'] = 'search_api_index_test_index';
+    $handler->display->display_options['sorts']['search_api_id']['field'] = 'search_api_id';
+    /* Contextual filter: Indexed Node: Range integer range argument */
+    $handler->display->display_options['arguments']['field_range_integer']['id'] = 'field_range_integer';
+    $handler->display->display_options['arguments']['field_range_integer']['table'] = 'search_api_index_test_index';
+    $handler->display->display_options['arguments']['field_range_integer']['field'] = 'field_range_integer';
+    $handler->display->display_options['arguments']['field_range_integer']['default_argument_type'] = 'fixed';
+    $handler->display->display_options['arguments']['field_range_integer']['summary']['number_of_records'] = '0';
+    $handler->display->display_options['arguments']['field_range_integer']['summary']['format'] = 'default_summary';
+    $handler->display->display_options['arguments']['field_range_integer']['summary_options']['items_per_page'] = '25';
+
+    return $view;
+  }
+
+}

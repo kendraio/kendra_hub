@@ -45,7 +45,6 @@ function range_feeds_set_target($source, $entity, $target, $value) {
 
   // Do not perform the regular empty() check here. 0 is a valid value. That's
   // really just a performance thing anyway.
-
   if (!is_array($value)) {
     $value = array($value);
   }
@@ -54,7 +53,7 @@ function range_feeds_set_target($source, $entity, $target, $value) {
   list($field_name, $column) = explode(':', $target);
   $info = field_info_field($field_name);
 
-  $field = isset($entity->$field_name) ? $entity->$field_name : array('und' => array());
+  $field = isset($entity->$field_name) ? $entity->$field_name : array(LANGUAGE_NONE => array());
   $delta = 0;
 
   foreach ($value as $v) {
@@ -67,7 +66,7 @@ function range_feeds_set_target($source, $entity, $target, $value) {
     }
 
     if (is_numeric($v)) {
-      $field['und'][$delta][$column] = $v;
+      $field[LANGUAGE_NONE][$delta][$column] = $v;
       $delta++;
     }
   }
