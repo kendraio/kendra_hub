@@ -1,0 +1,355 @@
+<?php
+
+/**
+ * @file
+ * Contains range base test classes.
+ */
+
+/**
+ * Base class for the range module's tests.
+ */
+class RangeBaseWebTestCase extends DrupalWebTestCase {
+
+  const FIELD_SETTINGS_DECIMAL_SEPARATOR = ',';
+  const FIELD_SETTINGS_PRECISION = 12;
+  const FIELD_SETTINGS_SCALE = 4;
+  const INSTANCE_LABEL = 'FIELD_LABEL';
+  const INSTANCE_SETTINGS_MIN = 5;
+  const INSTANCE_SETTINGS_MAX = 25;
+  const INSTANCE_SETTINGS_FIELD_PREFIX = 'FIELD_PREFIX';
+  const INSTANCE_SETTINGS_FIELD_SUFFIX = 'FIELD_SUFFIX';
+  const INSTANCE_SETTINGS_COMBINED_PREFIX = 'COMBINED_PREFIX';
+  const INSTANCE_SETTINGS_COMBINED_SUFFIX = 'COMBINED_SUFFIX';
+  const INSTANCE_SETTINGS_FROM_LABEL = 'FROM_LABEL';
+  const INSTANCE_SETTINGS_FROM_PREFIX = 'FROM_PREFIX';
+  const INSTANCE_SETTINGS_FROM_SUFFIX = 'FROM_SUFFIX';
+  const INSTANCE_SETTINGS_TO_LABEL = 'TO_LABEL';
+  const INSTANCE_SETTINGS_TO_PREFIX = 'TO_PREFIX';
+  const INSTANCE_SETTINGS_TO_SUFFIX = 'TO_SUFFIX';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $profile = 'testing';
+
+  /**
+   * Content type name we are testing against.
+   *
+   * @var string
+   */
+  protected $contentType = 'test_content_type';
+
+  /**
+   * Field definition.
+   *
+   * @var array
+   */
+  protected $field;
+
+  /**
+   * Field instance definition.
+   *
+   * @var array
+   */
+  protected $instance;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    $modules[] = 'range';
+    parent::setUp($modules);
+  }
+
+  /**
+   * Returns raw field name (without "field_" prefix added by Drupal field UI).
+   *
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   *
+   * @return string
+   *   Raw field name.
+   */
+  protected function getTestFieldNameRaw($field_type = 'range_integer') {
+    return "$field_type";
+  }
+
+  /**
+   * Returns field name (with "field_" prefix added by Drupal field UI).
+   *
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   *
+   * @return string
+   *   Field name.
+   */
+  protected function getTestFieldName($field_type = 'range_integer') {
+    return 'field_' . $this->getTestFieldNameRaw($field_type);
+  }
+
+  /**
+   * Creates a new content type.
+   *
+   * Drupal core drupalCreateContentType() method of DrupalWebTestCase class
+   * creates too much "noise". This is much simpler version of it.
+   */
+  protected function createTestContentType() {
+    $content_type = new stdClass();
+    $content_type->type = $this->contentType;
+    $content_type->name = $this->contentType;
+    $content_type->base = 'node_content';
+    $content_type->custom = 1;
+    $content_type->locked = 0;
+    $content_type->modified = 1;
+
+    node_type_save($content_type);
+
+    node_types_rebuild();
+    menu_rebuild();
+
+    // Reset permissions so that permissions for this content type are available.
+    $this->checkPermissions(array(), TRUE);
+  }
+
+  /**
+   * Creates a range field of a given type.
+   *
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   */
+  protected function createTestRangeField($field_type = 'range_integer') {
+    $field_name = $this->getTestFieldName($field_type);
+
+    $field = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => 1,
+      'settings' => array(),
+    );
+    if ($field_type === 'range_float' || $field_type === 'range_decimal') {
+      $field['settings']['decimal_separator'] = static::FIELD_SETTINGS_DECIMAL_SEPARATOR;
+      $field['settings']['precision'] = static::FIELD_SETTINGS_PRECISION;
+      $field['settings']['scale'] = static::FIELD_SETTINGS_SCALE;
+    }
+    $this->field = field_create_field($field);
+
+    $instance = array(
+      'field_name' => $field_name,
+      'entity_type' => 'node',
+      'bundle' => $this->contentType,
+      'label' => static::INSTANCE_LABEL,
+      'widget' => array(
+        'type' => 'range',
+      ),
+      'settings' => array(
+        'min' => static::INSTANCE_SETTINGS_MIN,
+        'max' => static::INSTANCE_SETTINGS_MAX,
+        'from' => array(
+          'label' => static::INSTANCE_SETTINGS_FROM_LABEL,
+          'prefix' => static::INSTANCE_SETTINGS_FROM_PREFIX,
+          'suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX,
+        ),
+        'to' => array(
+          'label' => static::INSTANCE_SETTINGS_TO_LABEL,
+          'prefix' => static::INSTANCE_SETTINGS_TO_PREFIX,
+          'suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX,
+        ),
+        'field' => array(
+          'prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX,
+          'suffix' => static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+        ),
+        'combined' => array(
+          'prefix' => static::INSTANCE_SETTINGS_COMBINED_PREFIX,
+          'suffix' => static::INSTANCE_SETTINGS_COMBINED_SUFFIX,
+        ),
+      ),
+    );
+    $this->instance = field_create_instance($instance);
+  }
+
+  /**
+   * Deletes previously created range field of a given type.
+   *
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   */
+  public function deleteTestRangeField($field_type = 'range_integer') {
+    $field_name = $this->getTestFieldName($field_type);
+    $instance = field_info_instance('node', $field_name, $this->contentType);
+    field_delete_instance($instance);
+  }
+
+  /**
+   * Creates a test node and sets values for a given range field type.
+   *
+   * @param array $values
+   *   Array with values for a single range item. Required keys are:
+   *     - from: FROM value
+   *     - to: TO value
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   *
+   * @return stdClass
+   *   Node object.
+   */
+  protected function createTestNode(array $values, $field_type = 'range_integer') {
+    $node = new stdClass();
+    $node->type = $this->contentType;
+    $node->uid = $this->loggedInUser->uid;
+
+    $field_name = $this->getTestFieldName($field_type);
+    $node->{$field_name}[LANGUAGE_NONE][0] = $values;
+    node_save($node);
+
+    return $node;
+  }
+
+}
+
+/**
+ * Base class for the range module's tests.
+ */
+class RangeFieldWidgetBaseWebTestCase extends RangeBaseWebTestCase {
+
+  /**
+   * Asserts that a field label with a given text exists.
+   *
+   * @param string $label
+   *   Label text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertFieldLabel($label, $message) {
+    return $this->assertFieldPropertyByText("//label[@for]", $label, $message);
+  }
+
+  /**
+   * Asserts that a field label with a given text does not exist.
+   *
+   * @param string $label
+   *   Label text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertNoFieldLabel($label, $message) {
+    return $this->assertNoFieldPropertyByText("//label[@for]", $label, $message);
+  }
+
+  /**
+   * Asserts that a field prefix with a given text exists.
+   *
+   * @param string $prefix
+   *   Prefix text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertFieldPrefix($prefix, $message) {
+    return $this->assertFieldPropertyByText("//span[@class='field-prefix']", $prefix, $message);
+  }
+
+  /**
+   * Asserts that a field prefix with a given text does not exist.
+   *
+   * @param string $prefix
+   *   Prefix text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertNoFieldPrefix($prefix, $message) {
+    return $this->assertNoFieldPropertyByText("//span[@class='field-prefix']", $prefix, $message);
+  }
+
+  /**
+   * Asserts that a field suffix with a given text exists.
+   *
+   * @param string $suffix
+   *   Suffix text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertFieldSuffix($suffix, $message) {
+    return $this->assertFieldPropertyByText("//span[@class='field-suffix']", $suffix, $message);
+  }
+
+  /**
+   * Asserts that a field suffix with a given text does not exist.
+   *
+   * @param string $suffix
+   *   Suffix text to search for.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  protected function assertNoFieldSuffix($suffix, $message) {
+    return $this->assertNoFieldPropertyByText("//span[@class='field-suffix']", $suffix, $message);
+  }
+
+  /**
+   * Asserts that a given field property with a given text exists.
+   *
+   * @param string $xpath
+   *   The xpath string to use in the search.
+   * @param string $text
+   *   Value of the field property.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  private function assertFieldPropertyByText($xpath, $text, $message) {
+    $result = $this->xpath($xpath . '[normalize-space(text())=:text]', array(':text' => $text));
+    return $this->assertTrue($result, $message);
+  }
+
+  /**
+   * Asserts that a given field property with a given text does not exist.
+   *
+   * @param string $xpath
+   *   The xpath string to use in the search.
+   * @param string $text
+   *   Value of the field property.
+   * @param string $message
+   *   Message to display.
+   *
+   * @return bool
+   *   TRUE on pass, FALSE on fail.
+   */
+  private function assertNoFieldPropertyByText($xpath, $text, $message) {
+    $result = $this->xpath($xpath . '[normalize-space(text())=:text]', array(':text' => $text));
+    return $this->assertFalse($result, $message);
+  }
+
+}

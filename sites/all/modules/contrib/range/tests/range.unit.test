@@ -1,0 +1,145 @@
+<?php
+
+/**
+ * @file
+ * Unit tests for Range module.
+ */
+
+/**
+ * Unit tests for Range.
+ */
+class RangeUnitTestCase extends DrupalUnitTestCase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Unit tests',
+      'description' => 'Tests range formatter layer.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  function setUp() {
+    drupal_load('module', 'range');
+    parent::setUp();
+  }
+
+  /**
+   * Tests range number formatter.
+   */
+  public function testRangeNumberFormat() {
+    $integer_number = 1234;
+    $float_number = 1234.56789;
+
+    // Test formatting an integer using number_format().
+    $result = _range_number_format($integer_number, 'range_integer', array('scale' => 0, 'decimal_separator' => '.', 'thousand_separator' => ' '));
+    $this->assertIdentical($result, '1 234', format_string('Integer number is formatted correctly using number_format(): <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test formatting a float using number_format().
+    $result = _range_number_format($float_number, 'range_decimal', array('scale' => 3, 'decimal_separator' => '.', 'thousand_separator' => ' '));
+    $this->assertIdentical($result, '1 234.568', format_string('Float number is formatted correctly using number_format(): <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test formatting an integer using sprintf().
+    $result = _range_number_format($integer_number, 'range_integer_sprintf', array('format_string' => '%06d'));
+    $this->assertIdentical($result, '001234', format_string('Integer number is formatted correctly using sprintf(): <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test formatting a float using sprintf().
+    $result = _range_number_format($float_number, 'range_decimal_sprintf', array('format_string' => '%.4f'));
+    $this->assertIdentical($result, '1234.5679', format_string('Float number is formatted correctly using sprintf(): <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+    // Test raw formatter.
+    $result = _range_number_format($float_number, 'range_unformatted', array());
+    $this->assertIdentical($result, '1234.56789', format_string('Unformatted float number is displayed correctly: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+  }
+
+  /**
+   * Test combined value formatter.
+   */
+  public function testRangeFormatterViewCombinedValue() {
+    $value = 12345;
+
+    $instance_settings = array(
+      'from' => array('prefix' => 'from_prefix-', 'suffix' => '-from_suffix'),
+      'to' => array('prefix' => 'to_prefix-', 'suffix' => '-to_suffix'),
+      'combined' => array('prefix' => 'combined_prefix-', 'suffix' => '-combined_suffix'),
+    );
+
+    // Test with COMBINED enabled.
+    $settings = array('from_prefix_suffix' => FALSE, 'to_prefix_suffix' => FALSE, 'combined_prefix_suffix' => TRUE);
+    $result = _range_field_formatter_view_combined_value($value, $settings, $instance_settings);
+    $this->assertEqual($result, 'combined_prefix-12345-combined_suffix', format_string('COMBINED prefix and suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with COMBINED, FROM and TO disabled.
+    $settings = array('from_prefix_suffix' => FALSE, 'to_prefix_suffix' => FALSE, 'combined_prefix_suffix' => FALSE);
+    $result = _range_field_formatter_view_combined_value($value, $settings, $instance_settings);
+    $this->assertEqual($result, '12345', format_string('No suffix or prefix has been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with COMBINED and TO disabled; FROM enabled.
+    $settings = array('from_prefix_suffix' => TRUE, 'to_prefix_suffix' => FALSE, 'combined_prefix_suffix' => FALSE);
+    $result = _range_field_formatter_view_combined_value($value, $settings, $instance_settings);
+    $this->assertEqual($result, 'from_prefix-12345-from_suffix', format_string('FROM value prefix and suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with COMBINED and FROM disabled; TO enabled.
+    $settings = array('from_prefix_suffix' => FALSE, 'to_prefix_suffix' => TRUE, 'combined_prefix_suffix' => FALSE);
+    $result = _range_field_formatter_view_combined_value($value, $settings, $instance_settings);
+    $this->assertEqual($result, 'to_prefix-12345-to_suffix', format_string('TO value prefix and suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with COMBINED disabled; FROM and TO enabled.
+    $settings = array('from_prefix_suffix' => TRUE, 'to_prefix_suffix' => TRUE, 'combined_prefix_suffix' => FALSE);
+    $result = _range_field_formatter_view_combined_value($value, $settings, $instance_settings);
+    $this->assertEqual($result, 'from_prefix-12345-to_suffix', format_string('FROM prefix and TO suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+  }
+
+  /**
+   * Test separate values formatter.
+   */
+  public function testRangeFormatterViewSeparateValues() {
+    $from_value = 12345;
+    $to_value = 67890;
+
+    $instance_settings = array(
+      'from' => array('prefix' => 'from_prefix-', 'suffix' => '-from_suffix'),
+      'to' => array('prefix' => 'to_prefix-', 'suffix' => '-to_suffix'),
+    );
+
+    // Test with disabled prefix and suffix.
+    $settings = array('from_prefix_suffix' => FALSE, 'to_prefix_suffix' => FALSE, 'range_separator' => '=');
+    $result = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance_settings);
+    $this->assertEqual($result, '12345=67890', format_string('No suffix or prefix has been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with enabled prefix only.
+    $settings = array('from_prefix_suffix' => TRUE, 'to_prefix_suffix' => FALSE, 'range_separator' => '=');
+    $result = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance_settings);
+    $this->assertEqual($result, 'from_prefix-12345-from_suffix=67890', format_string('FROM value prefix and suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with enabled suffix only.
+    $settings = array('from_prefix_suffix' => FALSE, 'to_prefix_suffix' => TRUE, 'range_separator' => '=');
+    $result = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance_settings);
+    $this->assertEqual($result, '12345=to_prefix-67890-to_suffix', format_string('TO value prefix and suffix have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test with enabled prefix and suffix.
+    $settings = array('from_prefix_suffix' => TRUE, 'to_prefix_suffix' => TRUE, 'range_separator' => '=');
+    $result = _range_field_formatter_view_separate_values($from_value, $to_value, $settings, $instance_settings);
+    $this->assertEqual($result, 'from_prefix-12345-from_suffix=to_prefix-67890-to_suffix', format_string('FROM and TO values prefixes and suffixes have been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+  }
+
+  /**
+   * Tests range prefixer/suffixer.
+   */
+  public function testRangeFormatterViewPrefixSuffix() {
+    $value = 1234;
+
+    // Test disabled prefix/suffix.
+    $result = _range_field_formatter_view_prefix_suffix($value, FALSE, array('prefix' => 'prefix-', 'suffix' => '-suffix'));
+    $this->assertEqual($result, '1234', format_string('No prefix or suffix has been added: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+
+    // Test enabled prefix and suffix.
+    $result = _range_field_formatter_view_prefix_suffix($value, TRUE, array('prefix' => 'prefix-', 'suffix' => '-suffix'));
+    $this->assertEqual($result, 'prefix-1234-suffix', format_string('Prefix and suffix have been added correctly: <strong>@output<strong>', array('@output' => var_export($result, TRUE))));
+  }
+
+}

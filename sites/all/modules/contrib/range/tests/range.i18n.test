@@ -1,0 +1,353 @@
+<?php
+
+/**
+ * @file
+ * Contains range i18n tests.
+ */
+
+/**
+ * Tests translatability of range fields.
+ */
+class RangeInternationalizationWebTestCase extends RangeFieldWidgetBaseWebTestCase {
+
+  const INSTANCE_LABEL_TRANSLATED = 'FIELD_LABEL_TRANSLATED';
+  const INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED = 'FIELD_PREFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED = 'FIELD_SUFFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_COMBINED_PREFIX_TRANSLATED = 'COMBINED_PREFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_COMBINED_SUFFIX_TRANSLATED = 'COMBINED_SUFFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_FROM_LABEL_TRANSLATED = 'FROM_LABEL_TRANSLATED';
+  const INSTANCE_SETTINGS_FROM_PREFIX_TRANSLATED = 'FROM_PREFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_FROM_SUFFIX_TRANSLATED = 'FROM_SUFFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_TO_LABEL_TRANSLATED = 'TO_LABEL_TRANSLATED';
+  const INSTANCE_SETTINGS_TO_PREFIX_TRANSLATED = 'TO_PREFIX_TRANSLATED';
+  const INSTANCE_SETTINGS_TO_SUFFIX_TRANSLATED = 'TO_SUFFIX_TRANSLATED';
+  const PRIMARY_LANGUAGE = 'en';
+  const SECONDARY_LANGUAGE = 'uk';
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Internationalization',
+      'description' => 'Tests translatability of range fields.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    $modules[] = 'i18n_field';
+    parent::setUp($modules);
+
+    $this->addSecondaryLanguage();
+    $this->createTestContentType();
+    $this->createTestRangeField();
+  }
+
+  /**
+   * Adds a secondary language.
+   */
+  protected function addSecondaryLanguage() {
+    include_once DRUPAL_ROOT . '/includes/locale.inc';
+    // Add secondary language.
+    locale_add_language(static::SECONDARY_LANGUAGE);
+    // Configure language negotiation.
+    $negotiation = array(
+      'locale-url' => array(),
+    );
+    language_negotiation_set(LANGUAGE_TYPE_INTERFACE, $negotiation);
+  }
+
+  /**
+   * Returns array of translatable range field instance settings.
+   */
+  protected function getRangeFieldInstanceTranslatableStringSources() {
+    return array(
+      'label' => static::INSTANCE_LABEL,
+      'from_label' => static::INSTANCE_SETTINGS_FROM_LABEL,
+      'from_prefix' => static::INSTANCE_SETTINGS_FROM_PREFIX,
+      'from_suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX,
+      'to_label' => static::INSTANCE_SETTINGS_TO_LABEL,
+      'to_prefix' => static::INSTANCE_SETTINGS_TO_PREFIX,
+      'to_suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX,
+      'field_prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX,
+      'field_suffix' => static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+      'combined_prefix' => static::INSTANCE_SETTINGS_COMBINED_PREFIX,
+      'combined_suffix' => static::INSTANCE_SETTINGS_COMBINED_SUFFIX,
+    );
+  }
+
+  /**
+   * Returns array of translatable range field instance settings.
+   */
+  protected function getRangeFieldInstanceTranslatableStringTargets() {
+    return array(
+      'label' => static::INSTANCE_LABEL_TRANSLATED,
+      'from_label' => static::INSTANCE_SETTINGS_FROM_LABEL_TRANSLATED,
+      'from_prefix' => static::INSTANCE_SETTINGS_FROM_PREFIX_TRANSLATED,
+      'from_suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX_TRANSLATED,
+      'to_label' => static::INSTANCE_SETTINGS_TO_LABEL_TRANSLATED,
+      'to_prefix' => static::INSTANCE_SETTINGS_TO_PREFIX_TRANSLATED,
+      'to_suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX_TRANSLATED,
+      'field_prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED,
+      'field_suffix' => static::INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED,
+      'combined_prefix' => static::INSTANCE_SETTINGS_COMBINED_PREFIX_TRANSLATED,
+      'combined_suffix' => static::INSTANCE_SETTINGS_COMBINED_SUFFIX_TRANSLATED,
+    );
+  }
+
+  /**
+   * Verifies that range field instance settings are translatable.
+   */
+  public function testRangeFieldInstanceSettingsAreTranslatable() {
+    $field_name = $this->getTestFieldName();
+
+    $strings = $this->getRangeFieldInstanceTranslatableStringSources();
+    foreach ($strings as $key => $value) {
+      $this->_testRangeFieldInstanceSettingIsTranslatable($value, "$field_name:$this->contentType:$key");
+    }
+  }
+
+  /**
+   * Verifies that given string with given context is translatable.
+   *
+   * This method searches for a string directly in the database instead of using
+   * string translation UI, because this test is designed to verify that range
+   * module works, not the Drupal core.
+   *
+   * @param string $source
+   *   Source string.
+   * @param string $context
+   *   Source string context.
+   */
+  protected function _testRangeFieldInstanceSettingIsTranslatable($source, $context) {
+    $query = db_select('locales_source', 'ls');
+    $query->addExpression('1');
+    $query->condition('source', $source)
+        ->condition('context', $context)
+        ->condition('textgroup', 'field');
+
+    $this->assertTrue($query->execute()->fetchField(), format_string('Source string %string with context %context exists in locales_source database table', array('%string' => $source, '%context' => $context)));
+  }
+
+  /**
+   * Verifies that range module field formatters respect interface language.
+   */
+  public function testRangeFieldFormatterRespectsInterfaceLanguage() {
+    $account = $this->drupalCreateUser(array('administer content types', 'administer nodes'));
+    $this->drupalLogin($account);
+
+    // Translate field instance settings.
+    $this->translateRangeFieldInstanceSettings();
+
+    // Create a test node.
+    $from_value = $to_value = 10;
+    $node = $this->createTestNode(array('from' => $from_value, 'to' => $to_value));
+
+    $languages = language_list();
+    // First, test with combined value off.
+    //
+    // Test default language (field instance settings should be in the original
+    // language - English).
+    $this->drupalGet("node/$node->nid", array('language' => $languages[static::PRIMARY_LANGUAGE]));
+    $original_formatted_field_value_array = array(
+      static::INSTANCE_SETTINGS_FIELD_PREFIX,
+      static::INSTANCE_SETTINGS_FROM_PREFIX,
+      $from_value,
+      static::INSTANCE_SETTINGS_FROM_SUFFIX,
+      '-',
+      static::INSTANCE_SETTINGS_TO_PREFIX,
+      $to_value,
+      static::INSTANCE_SETTINGS_TO_SUFFIX,
+      static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+    );
+    $original_formatted_field_value = implode('', $original_formatted_field_value_array);
+    $this->assertText($original_formatted_field_value, format_string('Correct original formatted range field value %value found on the page', array('%value' => $original_formatted_field_value)));
+
+    // Test secondary language (field instance settings should be translated to
+    // the secondary language).
+    $this->drupalGet("node/$node->nid", array('language' => $languages[static::SECONDARY_LANGUAGE]));
+    $translated_formatted_field_value_array = array(
+      static::INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED,
+      static::INSTANCE_SETTINGS_FROM_PREFIX_TRANSLATED,
+      $from_value,
+      static::INSTANCE_SETTINGS_FROM_SUFFIX_TRANSLATED,
+      '-',
+      static::INSTANCE_SETTINGS_TO_PREFIX_TRANSLATED,
+      $to_value,
+      static::INSTANCE_SETTINGS_TO_SUFFIX_TRANSLATED,
+      static::INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED,
+    );
+    $translated_formatted_field_value = implode('', $translated_formatted_field_value_array);
+    $this->assertText($translated_formatted_field_value, format_string('Correct translated formatted range field value %value found on the page', array('%value' => $translated_formatted_field_value)));
+
+    // Then test again with combined value on.
+    $instance = field_info_instance('node', $this->getTestFieldName(), $this->contentType);
+    $instance['display']['default']['settings']['range_combine'] = TRUE;
+    $instance['display']['default']['settings']['combined_prefix_suffix'] = TRUE;
+    field_update_instance($instance);
+
+    // Test default language (field instance settings should be in the original
+    // language - English).
+    $this->drupalGet("node/$node->nid", array('language' => $languages[static::PRIMARY_LANGUAGE]));
+    $original_formatted_field_value_array = array(
+      static::INSTANCE_SETTINGS_FIELD_PREFIX,
+      static::INSTANCE_SETTINGS_COMBINED_PREFIX,
+      $from_value,
+      static::INSTANCE_SETTINGS_COMBINED_SUFFIX,
+      static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+    );
+    $original_formatted_field_value = implode('', $original_formatted_field_value_array);
+    $this->assertText($original_formatted_field_value, format_string('Correct original formatted range field value %value found on the page', array('%value' => $original_formatted_field_value)));
+
+    // Test secondary language (field instance settings should be translated to
+    // the secondary language).
+    $this->drupalGet("node/$node->nid", array('language' => $languages[static::SECONDARY_LANGUAGE]));
+    $translated_formatted_field_value_array = array(
+      static::INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED,
+      static::INSTANCE_SETTINGS_COMBINED_PREFIX_TRANSLATED,
+      $from_value,
+      static::INSTANCE_SETTINGS_COMBINED_SUFFIX_TRANSLATED,
+      static::INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED,
+    );
+    $translated_formatted_field_value = implode('', $translated_formatted_field_value_array);
+    $this->assertText($translated_formatted_field_value, format_string('Correct translated formatted range field value %value found on the page', array('%value' => $translated_formatted_field_value)));
+  }
+
+  /**
+   * Verifies that range module field widget respects interface language.
+   */
+  public function testRangeFieldWidgetRespectsInterfaceLanguage() {
+    $account = $this->drupalCreateUser(array('administer content types', 'administer nodes', "create $this->contentType content"));
+    $this->drupalLogin($account);
+
+    // Translate field instance settings.
+    $this->translateRangeFieldInstanceSettings();
+
+    $languages = language_list();
+
+    // Test default language (field instance settings should be in the original
+    // language - English).
+    $this->drupalGet("node/add/$this->contentType", array('language' => $languages[static::PRIMARY_LANGUAGE]));
+
+    // Test field widget form.
+    $this->assertFieldLabel(static::INSTANCE_SETTINGS_FROM_LABEL, format_string('Correct original field label %label found on the page', array('%label' => static::INSTANCE_SETTINGS_FROM_LABEL)));
+    $this->assertFieldLabel(static::INSTANCE_SETTINGS_TO_LABEL, format_string('Correct original field label %label found on the page', array('%label' => static::INSTANCE_SETTINGS_TO_LABEL)));
+    $this->assertFieldPrefix(static::INSTANCE_SETTINGS_FIELD_PREFIX . static::INSTANCE_SETTINGS_FROM_PREFIX, format_string('Correct original field prefix %prefix found on the page', array('%prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX . static::INSTANCE_SETTINGS_FROM_PREFIX)));
+    $this->assertFieldSuffix(static::INSTANCE_SETTINGS_FROM_SUFFIX, format_string('Correct original field suffix %suffix found on the page', array('%suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX)));
+    $this->assertFieldPrefix(static::INSTANCE_SETTINGS_TO_PREFIX, format_string('Correct original field prefix %prefix found on the page', array('%prefix' => static::INSTANCE_SETTINGS_TO_PREFIX)));
+    $this->assertFieldSuffix(static::INSTANCE_SETTINGS_TO_SUFFIX . static::INSTANCE_SETTINGS_FIELD_SUFFIX, format_string('Correct original field suffix %suffix found on the page', array('%suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX . static::INSTANCE_SETTINGS_FIELD_SUFFIX)));
+
+    // Test secondary language (field instance settings should be translated to
+    // the secondary language).
+    $this->drupalGet("node/add/$this->contentType", array('language' => $languages[static::SECONDARY_LANGUAGE]));
+
+    $this->assertFieldLabel(static::INSTANCE_SETTINGS_FROM_LABEL_TRANSLATED, format_string('Correct translated field label %label found on the page', array('%label' => static::INSTANCE_SETTINGS_FROM_LABEL_TRANSLATED)));
+    $this->assertFieldLabel(static::INSTANCE_SETTINGS_TO_LABEL_TRANSLATED, format_string('Correct translated field label %label found on the page', array('%label' => static::INSTANCE_SETTINGS_TO_LABEL_TRANSLATED)));
+    $this->assertFieldPrefix(static::INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED . static::INSTANCE_SETTINGS_FROM_PREFIX_TRANSLATED, format_string('Correct translated field prefix %prefix found on the page', array('%prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX_TRANSLATED . static::INSTANCE_SETTINGS_FROM_PREFIX_TRANSLATED)));
+    $this->assertFieldSuffix(static::INSTANCE_SETTINGS_FROM_SUFFIX_TRANSLATED, format_string('Correct translated field suffix %suffix found on the page', array('%suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX_TRANSLATED)));
+    $this->assertFieldPrefix(static::INSTANCE_SETTINGS_TO_PREFIX_TRANSLATED, format_string('Correct translated field prefix %prefix found on the page', array('%prefix' => static::INSTANCE_SETTINGS_TO_PREFIX_TRANSLATED)));
+    $this->assertFieldSuffix(static::INSTANCE_SETTINGS_TO_SUFFIX_TRANSLATED . static::INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED, format_string('Correct translated field suffix %suffix found on the page', array('%suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX_TRANSLATED . static::INSTANCE_SETTINGS_FIELD_SUFFIX_TRANSLATED)));
+  }
+
+  /**
+   * Verify that range field form widget errors respect interface language.
+   */
+  public function testRangeFieldFormErrorsRespectInterfaceLanguage() {
+    $account = $this->drupalCreateUser(array("create $this->contentType content"));
+    $this->drupalLogin($account);
+
+    // Translate field instance settings.
+    $this->translateRangeFieldInstanceSettings();
+
+    $languages = language_list();
+    $field_name = $this->getTestFieldName();
+    $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
+
+    // Test default language (field instance settings should be in the original
+    // language - English).
+    //
+    // Test widget validation error messages.
+    $edit = array(
+      "{$form_element_key}[from]" => 'A',
+      "{$form_element_key}[to]" => 'Z',
+    );
+    $this->drupalPost("node/add/$this->contentType", $edit, t('Save'), array('language' => $languages[static::PRIMARY_LANGUAGE]));
+    $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+    $this->assertRaw($error_message, format_string('Correct original widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+    $this->assertRaw($error_message, format_string('Correct original widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+
+    // Test field validation error messages.
+    $edit = array(
+      "{$form_element_key}[from]" => '10',
+      "{$form_element_key}[to]" => '',
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: you must specify two values.', array('%name' => static::INSTANCE_LABEL));
+    $this->assertRaw($error_message, format_string('Correct original field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+
+    // Test secondary language (field instance settings should be translated to
+    // the secondary language).
+    //
+    // Test widget validation error messages.
+    $edit = array(
+      "{$form_element_key}[from]" => 'A',
+      "{$form_element_key}[to]" => 'A',
+    );
+    $this->drupalPost("node/add/$this->contentType", $edit, t('Save'), array('language' => $languages[static::SECONDARY_LANGUAGE]));
+    $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_FROM_LABEL_TRANSLATED));
+    $this->assertRaw($error_message, format_string('Correct translated widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_TO_LABEL_TRANSLATED));
+    $this->assertRaw($error_message, format_string('Correct translated widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+
+    // Test field validation error messages.
+    $edit = array(
+      "{$form_element_key}[from]" => '10',
+      "{$form_element_key}[to]" => '',
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $error_message = t('%name: you must specify two values.', array('%name' => static::INSTANCE_LABEL_TRANSLATED));
+    $this->assertRaw($error_message, format_string('Correct translated field validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+  }
+
+  /**
+   * Translates range field instance settings.
+   *
+   * This method translates strings by writing to the databse directly instead
+   * of using string translation UI, because this test is designed to verify
+   * that range module works, not the Drupal core.
+   */
+  protected function translateRangeFieldInstanceSettings() {
+    $field_name = $this->getTestFieldName();
+
+    $strings = $this->getRangeFieldInstanceTranslatableStringTargets();
+    foreach ($strings as $key => $value) {
+      // Find locale source ID.
+      $lid = db_select('locales_source', 'ls')
+          ->fields('ls', array('lid'))
+          ->condition('context', "$field_name:$this->contentType:$key")
+          ->condition('textgroup', 'field')
+          ->execute()
+          ->fetchField();
+
+      // Insert translation.
+      db_insert('locales_target')
+          ->fields(array(
+            'lid' => $lid,
+            'translation' => $value,
+            'language' => static::SECONDARY_LANGUAGE,
+            'i18n_status' => I18N_STRING_STATUS_CURRENT,
+          ))
+          ->execute();
+    }
+
+    // Clear string localization caches.
+    cache_clear_all("i18n:string:", 'cache', TRUE);
+    cache_clear_all('locale:', 'cache', TRUE);
+  }
+
+}

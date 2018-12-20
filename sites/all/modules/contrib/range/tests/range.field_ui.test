@@ -1,0 +1,308 @@
+<?php
+
+/**
+ * @file
+ * Contains range field UI tests.
+ */
+
+/**
+ * Tests adding range fields and their settings via field UI.
+ */
+class RangeFieldUIWebTestCase extends RangeBaseWebTestCase {
+
+  const FORMATTER_SETTING_THOUSAND_SEPARATOR = '.';
+
+  const FORMATTER_SETTING_DECIMAL_SEPARATOR = ', ';
+
+  const FORMATTER_SETTING_SCALE = 4;
+
+  const FORMATTER_SETTING_FORMAT_STRING = '%08d';
+
+  const FORMATTER_SETTING_RANGE_SEPARATOR = '=';
+
+  const FORMATTER_SETTING_RANGE_COMBINE = TRUE;
+
+  const FORMATTER_SETTING_FROM_PREFIX_SUFFIX = FALSE;
+
+  const FORMATTER_SETTING_TO_PREFIX_SUFFIX = FALSE;
+
+  const FORMATTER_SETTING_FIELD_PREFIX_SUFFIX = FALSE;
+
+  const FORMATTER_SETTING_COMBINED_PREFIX_SUFFIX = TRUE;
+
+  /**
+   * Meta information about tests.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Field UI',
+      'description' => 'Tests adding range fields and their settings via field UI.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    $modules[] = 'field_ui';
+    parent::setUp($modules);
+
+    $this->createTestContentType();
+    $account = $this->drupalCreateUser(array('administer content types', 'administer nodes', 'administer fields', "create $this->contentType content"));
+    $this->drupalLogin($account);
+  }
+
+  /**
+   * Helper method. Creates range field via field UI.
+   *
+   * @param string $field_type
+   *   Range field type. Could be one of the following values: range_integer,
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFieldCreationUI($field_type = 'range_integer') {
+    $this->drupalGet("admin/structure/types/manage/{$this->contentType}/fields");
+    $edit = array(
+      'fields[_add_new_field][label]' => $this->randomName(),
+      'fields[_add_new_field][field_name]' => $this->getTestFieldNameRaw($field_type),
+      'fields[_add_new_field][type]' => $field_type,
+      'fields[_add_new_field][widget_type]' => 'range',
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+  }
+
+  /**
+   * Helper method. Sets range field settings via field UI.
+   *
+   * @param string $field_type
+   *   Range field type. Could be one of the following values: range_integer,
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFieldSettingsUI($field_type = 'range_integer') {
+    $field_name = $this->getTestFieldName($field_type);
+
+    switch ($field_type) {
+      case 'range_integer':
+        $edit = array();
+        break;
+
+      case 'range_float':
+        $edit = array(
+          'field[settings][decimal_separator]' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR,
+        );
+        break;
+
+      case 'range_decimal':
+        $edit = array(
+          'field[settings][decimal_separator]' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR,
+          'field[settings][precision]' => static::FIELD_SETTINGS_PRECISION,
+          'field[settings][scale]' => static::FIELD_SETTINGS_SCALE,
+        );
+        break;
+
+      default:
+        $edit = array();
+    }
+
+    // Save field settings via field UI.
+    $this->drupalPost(NULL, $edit, t('Save field settings'));
+    // Clear field info cache.
+    field_info_cache_clear();
+
+    // Ensure that all field settings were saved correctly.
+    $field = field_info_field($field_name);
+    $settings = $field['settings'];
+    switch ($field_type) {
+      case 'range_float':
+        $this->assertEqual($settings['decimal_separator'], static::FIELD_SETTINGS_DECIMAL_SEPARATOR, format_string('Correct decimal separator setting %value found for the %field_type field type', array('%value' => $settings['decimal_separator'], '%field_type' => $field['type'])));
+        break;
+
+      case 'range_decimal':
+        $this->assertEqual($settings['decimal_separator'], static::FIELD_SETTINGS_DECIMAL_SEPARATOR, format_string('Correct decimal separator setting %value found for the %field_type field type', array('%value' => $settings['decimal_separator'], '%field_type' => $field['type'])));
+        $this->assertEqual($settings['precision'], static::FIELD_SETTINGS_PRECISION, format_string('Correct precision setting %value found for the %field_type field type', array('%value' => $settings['precision'], '%field_type' => $field['type'])));
+        $this->assertEqual($settings['scale'], static::FIELD_SETTINGS_SCALE, format_string('Correct scale setting %value found for the %field_type field type', array('%value' => $settings['scale'], '%field_type' => $field['type'])));
+        break;
+    }
+  }
+
+  /**
+   * Helper method. Sets range field instance settings via field UI.
+   *
+   * @param string $field_type
+   *   Range field type. Could be one of the following values: range_integer,
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFieldInstanceSettingsUI($field_type = 'range_integer') {
+    $field_name = $this->getTestFieldName($field_type);
+
+    switch ($field_type) {
+      case 'range_integer':
+      case 'range_float':
+      case 'range_decimal':
+        $edit = array(
+          'instance[settings][min]' => static::INSTANCE_SETTINGS_MIN,
+          'instance[settings][max]' => static::INSTANCE_SETTINGS_MAX,
+          'instance[settings][field][prefix]' => static::INSTANCE_SETTINGS_FIELD_PREFIX,
+          'instance[settings][field][suffix]' => static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+          'instance[settings][from][label]' => static::INSTANCE_SETTINGS_FROM_LABEL,
+          'instance[settings][from][prefix]' => static::INSTANCE_SETTINGS_FROM_PREFIX,
+          'instance[settings][from][suffix]' => static::INSTANCE_SETTINGS_FROM_SUFFIX,
+          'instance[settings][to][label]' => static::INSTANCE_SETTINGS_TO_LABEL,
+          'instance[settings][to][prefix]' => static::INSTANCE_SETTINGS_TO_PREFIX,
+          'instance[settings][to][suffix]' => static::INSTANCE_SETTINGS_TO_SUFFIX,
+          'instance[settings][combined][prefix]' => static::INSTANCE_SETTINGS_COMBINED_PREFIX,
+          'instance[settings][combined][suffix]' => static::INSTANCE_SETTINGS_COMBINED_SUFFIX,
+        );
+        break;
+
+      default:
+        $edit = array();
+    }
+
+    // Save field instance settings via field UI.
+    $this->drupalPost(NULL, $edit, t('Save settings'));
+    // Clear field info cache.
+    field_info_cache_clear();
+
+    // Ensure that all field instance settings were saved correctly.
+    $field = field_info_field($field_name);
+    $instance = field_info_instance('node', $field_name, $this->contentType);
+    $settings = $instance['settings'];
+
+    $this->assertEqual($settings['min'], static::INSTANCE_SETTINGS_MIN, format_string('Correct minimum setting %value found for the %field_type field type', array('%value' => $settings['min'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['max'], static::INSTANCE_SETTINGS_MAX, format_string('Correct maximum setting %value found for the %field_type field type', array('%value' => $settings['max'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['field']['prefix'], static::INSTANCE_SETTINGS_FIELD_PREFIX, format_string('Correct FIELD prefix setting %value found for the %field_type field type', array('%value' => $settings['field']['prefix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['field']['suffix'], static::INSTANCE_SETTINGS_FIELD_SUFFIX, format_string('Correct FIELD suffix setting %value found for the %field_type field type', array('%value' => $settings['field']['suffix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['from']['label'], static::INSTANCE_SETTINGS_FROM_LABEL, format_string('Correct FROM label setting %value found for the %field_type field type', array('%value' => $settings['from']['label'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['from']['prefix'], static::INSTANCE_SETTINGS_FROM_PREFIX, format_string('Correct FROM prefix setting %value found for the %field_type field type', array('%value' => $settings['from']['prefix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['from']['suffix'], static::INSTANCE_SETTINGS_FROM_SUFFIX, format_string('Correct FROM suffix setting %value found for the %field_type field type', array('%value' => $settings['from']['suffix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['to']['label'], static::INSTANCE_SETTINGS_TO_LABEL, format_string('Correct TO label setting %value found for the %field_type field type', array('%value' => $settings['to']['label'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['to']['prefix'], static::INSTANCE_SETTINGS_TO_PREFIX, format_string('Correct TO prefix setting %value found for the %field_type field type', array('%value' => $settings['to']['prefix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['to']['suffix'], static::INSTANCE_SETTINGS_TO_SUFFIX, format_string('Correct TO suffix setting %value found for the %field_type field type', array('%value' => $settings['to']['suffix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['combined']['prefix'], static::INSTANCE_SETTINGS_COMBINED_PREFIX, format_string('Correct COMBINED prefix setting %value found for the %field_type field type', array('%value' => $settings['combined']['prefix'], '%field_type' => $field['type'])));
+    $this->assertEqual($settings['combined']['suffix'], static::INSTANCE_SETTINGS_COMBINED_SUFFIX, format_string('Correct COMBINED suffix setting %value found for the %field_type field type', array('%value' => $settings['combined']['suffix'], '%field_type' => $field['type'])));
+  }
+
+  /**
+   * Helper method. Sets range field formatter settings via field UI.
+   *
+   * @param string $field_type
+   *   Range field type. Could be one of the following values: range_integer,
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFieldFormatterSettingsUI($field_type = 'range_integer') {
+    $field_name = $this->getTestFieldName($field_type);
+
+    switch ($field_type) {
+      case 'range_integer':
+        $formatters = array('range_integer', 'range_integer_sprintf');
+        break;
+
+      case 'range_float':
+      case 'range_decimal':
+        $formatters = array('range_decimal', 'range_decimal_sprintf');
+        break;
+
+      default:
+        $formatters = array();
+    }
+    $formatters[] = 'range_unformatted';
+
+    $this->drupalGet("admin/structure/types/manage/{$this->contentType}/display");
+    foreach ($formatters as $formatter) {
+      $edit = array(
+        "fields[$field_name][type]" => $formatter,
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $this->drupalPostAJAX(NULL, array(), "{$field_name}_formatter_settings_edit");
+
+      switch ($formatter) {
+        case 'range_integer':
+          $edit = array(
+            "fields[$field_name][settings_edit_form][settings][thousand_separator]" => static::FORMATTER_SETTING_THOUSAND_SEPARATOR,
+          );
+          break;
+
+        case 'range_decimal':
+          $edit = array(
+            "fields[$field_name][settings_edit_form][settings][thousand_separator]" => static::FORMATTER_SETTING_THOUSAND_SEPARATOR,
+            "fields[$field_name][settings_edit_form][settings][decimal_separator]" => static::FORMATTER_SETTING_DECIMAL_SEPARATOR,
+            "fields[$field_name][settings_edit_form][settings][scale]" => static::FORMATTER_SETTING_SCALE,
+          );
+          break;
+
+        case 'range_integer_sprintf':
+        case 'range_decimal_sprintf':
+          $edit = array(
+            "fields[$field_name][settings_edit_form][settings][format_string]" => static::FORMATTER_SETTING_FORMAT_STRING,
+          );
+          break;
+      }
+      $edit += array(
+        "fields[$field_name][settings_edit_form][settings][range_separator]" => static::FORMATTER_SETTING_RANGE_SEPARATOR,
+        "fields[$field_name][settings_edit_form][settings][range_combine]" => static::FORMATTER_SETTING_RANGE_COMBINE,
+        "fields[$field_name][settings_edit_form][settings][from_prefix_suffix]" => static::FORMATTER_SETTING_FROM_PREFIX_SUFFIX,
+        "fields[$field_name][settings_edit_form][settings][to_prefix_suffix]" => static::FORMATTER_SETTING_TO_PREFIX_SUFFIX,
+        "fields[$field_name][settings_edit_form][settings][field_prefix_suffix]" => static::FORMATTER_SETTING_FIELD_PREFIX_SUFFIX,
+        "fields[$field_name][settings_edit_form][settings][combined_prefix_suffix]" => static::FORMATTER_SETTING_COMBINED_PREFIX_SUFFIX,
+      );
+      $this->drupalPostAJAX(NULL, $edit, array($this->getTestFieldName($field_type) . '_formatter_settings_update' => t('Update')));
+      // Save field settings via field UI.
+      $this->drupalPost(NULL, array(), t('Save'));
+      // Clear field info cache.
+      field_info_cache_clear();
+
+      // Ensure that all field formatter settings were saved correctly.
+      $field = field_info_field($field_name);
+      $instance = field_info_instance('node', $field_name, $this->contentType);
+      $settings = $instance['display']['default']['settings'];
+
+      switch ($formatter) {
+        case 'range_integer':
+          $this->assertEqual($settings['thousand_separator'], static::FORMATTER_SETTING_THOUSAND_SEPARATOR, format_string('Correct thousand separator setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['thousand_separator'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+          break;
+
+        case 'range_decimal':
+          $this->assertEqual($settings['thousand_separator'], static::FORMATTER_SETTING_THOUSAND_SEPARATOR, format_string('Correct thousand separator setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['thousand_separator'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+          $this->assertEqual($settings['decimal_separator'], static::FORMATTER_SETTING_DECIMAL_SEPARATOR, format_string('Correct decimal separator setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['decimal_separator'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+          $this->assertEqual($settings['scale'], static::FORMATTER_SETTING_SCALE, format_string('Correct scale setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['scale'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+          break;
+
+        case 'range_integer_sprintf':
+        case 'range_decimal_sprintf':
+          $this->assertEqual($settings['format_string'], static::FORMATTER_SETTING_FORMAT_STRING, format_string('Correct format string %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['format_string'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+          break;
+      }
+      $this->assertEqual($settings['range_separator'], static::FORMATTER_SETTING_RANGE_SEPARATOR, format_string('Correct range separator setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['range_separator'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+      $this->assertEqual($settings['range_combine'], static::FORMATTER_SETTING_RANGE_COMBINE, format_string('Correct combine equivalent values setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['range_combine'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+      $this->assertEqual($settings['from_prefix_suffix'], static::FORMATTER_SETTING_FROM_PREFIX_SUFFIX, format_string('Correct display FROM prefix/suffix setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['from_prefix_suffix'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+      $this->assertEqual($settings['to_prefix_suffix'], static::FORMATTER_SETTING_TO_PREFIX_SUFFIX, format_string('Correct display TO prefix/suffix setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['to_prefix_suffix'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+      $this->assertEqual($settings['field_prefix_suffix'], static::FORMATTER_SETTING_FIELD_PREFIX_SUFFIX, format_string('Correct display FIELD prefix/suffix setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['field_prefix_suffix'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+      $this->assertEqual($settings['combined_prefix_suffix'], static::FORMATTER_SETTING_COMBINED_PREFIX_SUFFIX, format_string('Correct display COMBINED prefix/suffix setting %value found for the %formatter_type formater (%field_type field type)', array('%value' => $settings['combined_prefix_suffix'], '%formatter_type' => $formatter, '%field_type' => $field['type'])));
+    }
+  }
+
+  /**
+   * Helper method. Tests given range field type via field UI.
+   *
+   * @param string $field_type
+   *   Range field type. Could be one of the following values: range_integer,
+   *   range_float or range_decimal.
+   */
+  protected function _testRangeFieldUI($field_type) {
+    $this->_testRangeFieldCreationUI($field_type);
+    $this->_testRangeFieldSettingsUI($field_type);
+    $this->_testRangeFieldInstanceSettingsUI($field_type);
+    $this->_testRangeFieldFormatterSettingsUI($field_type);
+  }
+
+  /**
+   * Tests adding range fields and their settings via field UI.
+   */
+  public function testRangeFieldsUI() {
+    foreach (array('range_integer', 'range_float', 'range_decimal') as $field_type) {
+      $this->_testRangeFieldUI($field_type);
+    }
+  }
+
+}

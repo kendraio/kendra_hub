@@ -1,14 +1,36 @@
-name = Range field
+name = Numeric range
 description = Provides numeric range field.
 package = Fields
 core = 7.x
 dependencies[] = field
 
-files[] = views/range_views_handler_filter_range.inc
+test_dependencies[] = i18n_field
+test_dependencies[] = search_api
+test_dependencies[] = search_api_db
+test_dependencies[] = search_api_views
+test_dependencies[] = views
 
-; Information added by Drupal.org packaging script on 2014-02-20
-version = "7.x-1.1"
+; Tests
+files[] = tests/range.unit.test
+files[] = tests/range.base.test
+files[] = tests/range.field_ui.test
+files[] = tests/range.field_widget.test
+files[] = tests/range.field_widget_validation.test
+files[] = tests/range.i18n.test
+files[] = tests/views/range.views.base.test
+files[] = tests/views/range.views.filter.test
+files[] = tests/views/range.views.argument.test
+
+; Views handlers
+files[] = views/range_handler_filter_numeric_range.inc
+files[] = views/range_handler_argument_numeric_range.inc
+
+; Migrate handlers
+files[] = migrate/destinations/range.inc
+
+; Information added by Drupal.org packaging script on 2016-10-04
+version = "7.x-1.7"
 core = "7.x"
 project = "range"
-datestamp = "1392893015"
+datestamp = "1475599141"
 

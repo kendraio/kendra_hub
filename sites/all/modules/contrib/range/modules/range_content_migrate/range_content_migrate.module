@@ -1,0 +1,143 @@
+<?php
+
+/**
+ * @file
+ * Range fields content migration from D6 to D7.
+ */
+
+/**
+ * Implements hook_content_migrate_field_alter().
+ */
+function range_content_migrate_content_migrate_field_alter(&$field, $instance) {
+  switch ($field['module']) {
+    case 'range':
+      // Rename decimal setting to decimal_separator.
+      if (isset($field['settings']['decimal'])) {
+        $field['settings']['decimal_separator'] = $field['settings']['decimal'];
+      }
+      // Add a decimal_separator setting to floats.
+      if ($field['type'] === 'range_float') {
+        $field['settings']['decimal_separator'] = '.';
+      }
+      // Remove unused settings.
+      $unused_settings = array(
+        'prefix', 'suffix',
+        'min', 'max',
+        'allowed_values', 'allowed_values_php',
+        'decimal',
+      );
+      foreach ($unused_settings as $key) {
+        unset($field['settings'][$key]);
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_content_migrate_instance_alter().
+ */
+function range_content_migrate_content_migrate_instance_alter(&$instance, $field) {
+  switch ($field['module']) {
+    case 'range':
+      // Range formatters and formatter settings have changed.
+      $new_type = array(
+        'unformatted' => 'range_unformatted',
+      );
+      $old_type = array(
+        'default',
+        'us_0', 'us_1', 'us_2',
+        'be_0', 'be_1', 'be_2',
+        'fr_0', 'fr_1', 'fr_2',
+      );
+      foreach ($old_type as $type) {
+        $new_type[$type] = $field['type'] === 'range_integer' ? 'range_integer' : 'range_decimal';
+      }
+      $base_settings = array(
+        'range_combine' => TRUE,
+        'range_separator' => '-',
+        'from_prefix_suffix' => TRUE,
+        'to_prefix_suffix' => TRUE,
+        'field_prefix_suffix' => TRUE,
+      );
+      $new_settings = array(
+        'unformatted' => $base_settings,
+        'default' => array(
+          'thousand_separator' => '',
+          'decimal_separator' => '.',
+          'scale' => 0,
+        ) + $base_settings,
+        'us_0' => array(
+          'thousand_separator' => ',',
+          'decimal_separator' => '.',
+          'scale' => 0,
+        ) + $base_settings,
+        'us_1' => array(
+          'thousand_separator' => ',',
+          'decimal_separator' => '.',
+          'scale' => 1,
+        ) + $base_settings,
+        'us_2' => array(
+          'thousand_separator' => ',',
+          'decimal_separator' => '.',
+          'scale' => 2,
+        ) + $base_settings,
+        'be_0' => array(
+          'thousand_separator' => '',
+          'decimal_separator' => ',',
+          'scale' => 0,
+        ) + $base_settings,
+        'be_1' => array(
+          'thousand_separator' => '.',
+          'decimal_separator' => ',',
+          'scale' => 1,
+        ) + $base_settings,
+        'be_2' => array(
+          'thousand_separator' => '.',
+          'decimal_separator' => ',',
+          'scale' => 2,
+        ) + $base_settings,
+        'fr_0' => array(
+          'thousand_separator' => ' ',
+          'decimal_separator' => ', ',
+          'scale' => 0,
+        ) + $base_settings,
+        'fr_1' => array(
+          'thousand_separator' => ' ',
+          'decimal_separator' => ', ',
+          'scale' => 1,
+        ) + $base_settings,
+        'fr_2' => array(
+          'thousand_separator' => ' ',
+          'decimal_separator' => ', ',
+          'scale' => 2,
+        ) + $base_settings,
+      );
+      foreach ($instance['display'] as $context => $settings) {
+        if (array_key_exists($settings['type'], $new_type)) {
+          $instance['display'][$context]['type'] = $new_type[$settings['type']];
+          $instance['display'][$context]['settings'] = $new_settings[$settings['type']];
+        }
+      }
+
+      // Min and max, prefix and suffix settings have been moved to instance.
+      $instance['settings']['min'] = $field['settings']['min'];
+      $instance['settings']['max'] = $field['settings']['max'];
+      $instance['settings']['field']['prefix'] = $field['settings']['prefix'];
+      $instance['settings']['field']['suffix'] = $field['settings']['suffix'];
+      break;
+  }
+}
+
+/**
+ * Implements hook_content_migrate_data_record_alter().
+ */
+function range_content_migrate_content_migrate_data_record_alter(&$record, $field, $instance) {
+  switch ($field['module']) {
+    case 'range':
+      // Range in D7 stores two values: FROM and TO.
+      $field_name = $field['field_name'];
+      $record[$field_name . '_from'] = $record[$field_name . '_to'] = $record[$field_name . '_value'];
+      unset($record[$field_name . '_value']);
+      break;
+  }
+}

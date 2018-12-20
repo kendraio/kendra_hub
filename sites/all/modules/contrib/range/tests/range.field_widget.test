@@ -1,0 +1,152 @@
+<?php
+
+/**
+ * @file
+ * Contains range field widget tests.
+ */
+
+/**
+ * Tests range field widget.
+ */
+class RangeFieldWidgetTestCase extends RangeFieldWidgetBaseWebTestCase {
+
+  /**
+   * Meta information about tests.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Field widget',
+      'description' => 'Tests range field widget.',
+      'group' => 'Range',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(array $modules = array()) {
+    parent::setUp($modules);
+
+    $this->createTestContentType();
+    $account = $this->drupalCreateUser(array('administer content types', 'administer nodes', "create $this->contentType content"));
+    $this->drupalLogin($account);
+  }
+
+  /**
+   * Helper method. Tests range field widget for a given range field type.
+   *
+   * @param string $field_type
+   *   Range field type. Possible values:
+   *     - range_decimal
+   *     - range_float
+   *     - range_integer
+   */
+  protected function _testRangeFieldWidget($field_type) {
+    $this->createTestRangeField($field_type);
+
+    $field_name = $this->getTestFieldName($field_type);
+    $form_element_key = $field_name. '[' . LANGUAGE_NONE . '][0]';
+    $edit = array(
+      'title' => $this->randomString(),
+      "{$form_element_key}[from]" => static::INSTANCE_SETTINGS_MIN,
+      "{$form_element_key}[to]" => static::INSTANCE_SETTINGS_MAX,
+    );
+    $this->drupalPost("node/add/$this->contentType", $edit, t('Save'));
+
+    $formatted_field_value_array = array(
+      static::INSTANCE_SETTINGS_FIELD_PREFIX,
+      static::INSTANCE_SETTINGS_FROM_PREFIX,
+      number_format(static::INSTANCE_SETTINGS_MIN, $field_type === 'range_integer' ? 0 : 2),
+      static::INSTANCE_SETTINGS_FROM_SUFFIX,
+      '-',
+      static::INSTANCE_SETTINGS_TO_PREFIX,
+      number_format(static::INSTANCE_SETTINGS_MAX, $field_type === 'range_integer' ? 0 : 2),
+      static::INSTANCE_SETTINGS_TO_SUFFIX,
+      static::INSTANCE_SETTINGS_FIELD_SUFFIX,
+    );
+    $formatted_field_value = implode('', $formatted_field_value_array);
+    $this->assertText($formatted_field_value, format_string('Correct formatted range field value %value found on the page', array('%value' => $formatted_field_value)));
+
+    // Test that FIELD, FROM and TO prefixes/suffixes are being displayed
+    // correctly.
+    //
+    // FROM and TO labels, FIELD, FROM AND TO prefixes/suffixes are present.
+    $this->drupalGet("node/add/$this->contentType");
+    $label = static::INSTANCE_SETTINGS_FROM_LABEL;
+    $this->assertFieldLabel($label, format_string('Correct field label %label found on the page', array('%label' => $label)));
+    $label = static::INSTANCE_SETTINGS_TO_LABEL;
+    $this->assertFieldLabel($label, format_string('Correct field label %label found on the page', array('%label' => $label)));
+    $prefix = static::INSTANCE_SETTINGS_FIELD_PREFIX . static::INSTANCE_SETTINGS_FROM_PREFIX;
+    $this->assertFieldPrefix($prefix, format_string('Correct field prefix %prefix found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_FROM_SUFFIX;
+    $this->assertFieldSuffix($suffix, format_string('Correct field suffix %suffix found on the page', array('%suffix' => $suffix)));
+    $prefix = static::INSTANCE_SETTINGS_TO_PREFIX;
+    $this->assertFieldPrefix($prefix, format_string('Correct field prefix %prefix found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_TO_SUFFIX . static::INSTANCE_SETTINGS_FIELD_SUFFIX;
+    $this->assertFieldSuffix($suffix, format_string('Correct field suffix %suffix found on the page', array('%suffix' => $suffix)));
+    // No FROM and TO labels, no prefixes/suffixes.
+    $settings = array(
+      'from' => array('label' => '', 'prefix' => '', 'suffix' => ''),
+      'to' => array('label' => '', 'prefix' => '', 'suffix' => ''),
+      'field' => array('prefix' => '', 'suffix' => ''),
+    );
+    $this->instance['settings'] = $settings + $this->instance['settings'];
+    field_update_instance($this->instance);
+    $this->drupalGet("node/add/$this->contentType");
+    $label = static::INSTANCE_SETTINGS_FROM_LABEL;
+    $this->assertNoFieldLabel($label, format_string('Field label %label not found on the page', array('%label' => $label)));
+    $label = static::INSTANCE_SETTINGS_TO_LABEL;
+    $this->assertNoFieldLabel($label, format_string('Field label %label not found on the page', array('%label' => $label)));
+    $prefix = static::INSTANCE_SETTINGS_FIELD_PREFIX . static::INSTANCE_SETTINGS_FROM_PREFIX;
+    $this->assertNoFieldPrefix($prefix, format_string('Field prefix %prefix not found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_FROM_SUFFIX;
+    $this->assertNoFieldSuffix($suffix, format_string('Field suffix %suffix not found on the page', array('%suffix' => $suffix)));
+    $prefix = static::INSTANCE_SETTINGS_TO_PREFIX;
+    $this->assertNoFieldPrefix($prefix, format_string('Field prefix %prefix not found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_TO_SUFFIX . static::INSTANCE_SETTINGS_FIELD_SUFFIX;
+    $this->assertNoFieldSuffix($suffix, format_string('Field suffix %suffix not found on the page', array('%suffix' => $suffix)));
+    // FIELD prefix/suffix only.
+    $settings = array(
+      'field' => array('prefix' => static::INSTANCE_SETTINGS_FIELD_PREFIX, 'suffix' => static::INSTANCE_SETTINGS_FIELD_SUFFIX),
+    );
+    $this->instance['settings'] = $settings + $this->instance['settings'];
+    field_update_instance($this->instance);
+    $this->drupalGet("node/add/$this->contentType");
+    $prefix = static::INSTANCE_SETTINGS_FIELD_PREFIX;
+    $this->assertFieldPrefix($prefix, format_string('Correct field prefix %prefix found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_FROM_SUFFIX;
+    $this->assertNoFieldSuffix($suffix, format_string('Field suffix %suffix not found on the page', array('%suffix' => $suffix)));
+    $prefix = static::INSTANCE_SETTINGS_TO_PREFIX;
+    $this->assertNoFieldPrefix($prefix, format_string('Field prefix %prefix not found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_FIELD_SUFFIX;
+    $this->assertFieldSuffix($suffix, format_string('Correct field suffix %suffix found on the page', array('%suffix' => $suffix)));
+    // FROM.and TO prefixes/suffixes only.
+    $settings = array(
+      'from' => array('label' => '', 'prefix' => static::INSTANCE_SETTINGS_FROM_PREFIX, 'suffix' => static::INSTANCE_SETTINGS_FROM_SUFFIX),
+      'to' => array('label' => '', 'prefix' => static::INSTANCE_SETTINGS_TO_PREFIX, 'suffix' => static::INSTANCE_SETTINGS_TO_SUFFIX),
+      'field' => array('prefix' => '', 'suffix' => ''),
+    );
+    $this->instance['settings'] = $settings + $this->instance['settings'];
+    field_update_instance($this->instance);
+    $this->drupalGet("node/add/$this->contentType");
+    $prefix = static::INSTANCE_SETTINGS_FROM_PREFIX;
+    $this->assertFieldPrefix($prefix, format_string('Correct field prefix %prefix found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_FROM_SUFFIX;
+    $this->assertFieldSuffix($suffix, format_string('Correct field suffix %suffix found on the page', array('%suffix' => $suffix)));
+    $prefix = static::INSTANCE_SETTINGS_TO_PREFIX;
+    $this->assertFieldPrefix($prefix, format_string('Correct field prefix %prefix found on the page', array('%prefix' => $prefix)));
+    $suffix = static::INSTANCE_SETTINGS_TO_SUFFIX;
+    $this->assertFieldSuffix($suffix, format_string('Correct field suffix %suffix found on the page', array('%suffix' => $suffix)));
+
+    $this->deleteTestRangeField($field_type);
+  }
+
+  /**
+   * Tests range field widget.
+   */
+  public function testRangeFieldWidget() {
+    foreach (array('range_integer', 'range_float', 'range_decimal') as $field_type) {
+      $this->_testRangeFieldWidget($field_type);
+    }
+  }
+}
