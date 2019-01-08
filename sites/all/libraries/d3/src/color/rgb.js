@@ -4,32 +4,24 @@ import "hsl";
 import "lab";
 import "xyz";
 
-d3.rgb = function(r, g, b) {
-  return arguments.length === 1
-      ? (r instanceof d3_Rgb ? d3_rgb(r.r, r.g, r.b)
+d3.rgb = d3_rgb;
+
+function d3_rgb(r, g, b) {
+  return this instanceof d3_rgb ? void (this.r = ~~r, this.g = ~~g, this.b = ~~b)
+      : arguments.length < 2 ? (r instanceof d3_rgb ? new d3_rgb(r.r, r.g, r.b)
       : d3_rgb_parse("" + r, d3_rgb, d3_hsl_rgb))
-      : d3_rgb(~~r, ~~g, ~~b);
-};
+      : new d3_rgb(r, g, b);
+}
 
 function d3_rgbNumber(value) {
-  return d3_rgb(value >> 16, value >> 8 & 0xff, value & 0xff);
+  return new d3_rgb(value >> 16, value >> 8 & 0xff, value & 0xff);
 }
 
 function d3_rgbString(value) {
   return d3_rgbNumber(value) + "";
 }
 
-function d3_rgb(r, g, b) {
-  return new d3_Rgb(r, g, b);
-}
-
-function d3_Rgb(r, g, b) {
-  this.r = r;
-  this.g = g;
-  this.b = b;
-}
-
-var d3_rgbPrototype = d3_Rgb.prototype = new d3_Color;
+var d3_rgbPrototype = d3_rgb.prototype = new d3_color;
 
 d3_rgbPrototype.brighter = function(k) {
   k = Math.pow(0.7, arguments.length ? k : 1);
@@ -37,16 +29,16 @@ d3_rgbPrototype.brighter = function(k) {
       g = this.g,
       b = this.b,
       i = 30;
-  if (!r && !g && !b) return d3_rgb(i, i, i);
+  if (!r && !g && !b) return new d3_rgb(i, i, i);
   if (r && r < i) r = i;
   if (g && g < i) g = i;
   if (b && b < i) b = i;
-  return d3_rgb(Math.min(255, ~~(r / k)), Math.min(255, ~~(g / k)), Math.min(255, ~~(b / k)));
+  return new d3_rgb(Math.min(255, r / k), Math.min(255, g / k), Math.min(255, b / k));
 };
 
 d3_rgbPrototype.darker = function(k) {
   k = Math.pow(0.7, arguments.length ? k : 1);
-  return d3_rgb(~~(k * this.r), ~~(k * this.g), ~~(k * this.b));
+  return new d3_rgb(k * this.r, k * this.g, k * this.b);
 };
 
 d3_rgbPrototype.hsl = function() {
@@ -72,7 +64,7 @@ function d3_rgb_parse(format, rgb, hsl) {
       color;
 
   /* Handle hsl, rgb. */
-  m1 = /([a-z]+)\((.*)\)/i.exec(format);
+  m1 = /([a-z]+)\((.*)\)/.exec(format = format.toLowerCase());
   if (m1) {
     m2 = m1[2].split(",");
     switch (m1[1]) {
@@ -94,10 +86,12 @@ function d3_rgb_parse(format, rgb, hsl) {
   }
 
   /* Named colors. */
-  if (color = d3_rgb_names.get(format)) return rgb(color.r, color.g, color.b);
+  if (color = d3_rgb_names.get(format)) {
+    return rgb(color.r, color.g, color.b);
+  }
 
   /* Hexadecimal colors: #rgb and #rrggbb. */
-  if (format != null && format.charAt(0) === "#" && !isNaN(color = parseInt(format.substring(1), 16))) {
+  if (format != null && format.charAt(0) === "#" && !isNaN(color = parseInt(format.slice(1), 16))) {
     if (format.length === 4) {
       r = (color & 0xf00) >> 4; r = (r >> 4) | r;
       g = (color & 0xf0); g = (g >> 4) | g;
@@ -120,7 +114,7 @@ function d3_rgb_hsl(r, g, b) {
       s,
       l = (max + min) / 2;
   if (d) {
-    s = l < .5 ? d / (max + min) : d / (2 - max - min);
+    s = l < 0.5 ? d / (max + min) : d / (2 - max - min);
     if (r == max) h = (g - b) / d + (g < b ? 6 : 0);
     else if (g == max) h = (b - r) / d + 2;
     else h = (r - g) / d + 4;
@@ -129,7 +123,7 @@ function d3_rgb_hsl(r, g, b) {
     h = NaN;
     s = l > 0 && l < 1 ? 0 : h;
   }
-  return d3_hsl(h, s, l);
+  return new d3_hsl(h, s, l);
 }
 
 function d3_rgb_lab(r, g, b) {
@@ -271,6 +265,7 @@ var d3_rgb_names = d3.map({
   plum: 0xdda0dd,
   powderblue: 0xb0e0e6,
   purple: 0x800080,
+  rebeccapurple: 0x663399,
   red: 0xff0000,
   rosybrown: 0xbc8f8f,
   royalblue: 0x4169e1,

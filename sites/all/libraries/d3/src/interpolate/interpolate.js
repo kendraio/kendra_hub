@@ -17,8 +17,8 @@ function d3_interpolate(a, b) {
 d3.interpolators = [
   function(a, b) {
     var t = typeof b;
-    return (t === "string" ? (d3_rgb_names.has(b) || /^(#|rgb\(|hsl\()/.test(b) ? d3_interpolateRgb : d3_interpolateString)
-        : b instanceof d3_Color ? d3_interpolateRgb
+    return (t === "string" ? (d3_rgb_names.has(b.toLowerCase()) || /^(#|rgb\(|hsl\()/i.test(b) ? d3_interpolateRgb : d3_interpolateString)
+        : b instanceof d3_color ? d3_interpolateRgb
         : Array.isArray(b) ? d3_interpolateArray
         : t === "object" && isNaN(b) ? d3_interpolateObject
         : d3_interpolateNumber)(a, b);

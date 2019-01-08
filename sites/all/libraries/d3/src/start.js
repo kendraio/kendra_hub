@@ -1,2 +1,2 @@
 !function(){
-  var d3 = {version: "3.4.8"}; // semver
+  var d3 = {version: "3.5.16"}; // semver
