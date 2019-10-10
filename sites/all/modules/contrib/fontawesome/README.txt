@@ -24,7 +24,7 @@ page on Drupal.org for more information.
    Example for an info icon: <i class="fas fa-camera-retro"></i>
 
    See more examples of using "Font Awesome" within HTML at:
-   https://fontawesome.com/how-to-use/svg-with-js
+   https://fontawesome.com/how-to-use/on-the-web/referencing-icons/basic-use
 
 
 INSTALLATION
@@ -54,8 +54,8 @@ INSTALLATION
          (http://fontawesome.com) and place inside
          "sites/all/libraries/fontawesome" directory. The JS file should
          be at sites/all/libraries/fontawesome/js/all.js
-         Direct link for downloading latest version (current is v5.5.0) is:
-         https://use.fontawesome.com/releases/v5.5.0/fontawesome-free-5.5.0-web.zip
+         Direct link for downloading latest version (current is v5.8.2) is:
+         https://use.fontawesome.com/releases/v5.8.2/fontawesome-free-5.8.2-web.zip
     b. Enable the module at Administer >> Modules.
 
 
@@ -64,7 +64,7 @@ _____
 Font Awesome can be used in many ways - you can manually insert Font Awesome
 tags wherever you see fit after enabling the module, but there are other ways
 as well. See
-  https://fontawesome.com/how-to-use/on-the-web/setup/getting-started?using=svg-with-js
+  https://fontawesome.com/how-to-use/on-the-web/referencing-icons/basic-use
 for information on basic usage.
 
 CSS Pseudo-elements - if you are using the older version of Font Awesome, CSS
