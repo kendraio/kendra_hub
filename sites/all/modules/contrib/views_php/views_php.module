@@ -27,7 +27,7 @@ function views_php_check_access($php_access, $view_name, $display_id, $account =
   }
 
   if (!isset($function[$view_name . ':' . $display_id])) {
-    $function[$view_name . ':' . $display_id] = create_function('$view_name, $display_id, $account', $php_access . ';');
+    $function[$view_name . ':' . $display_id] = views_php_create_function('$view_name, $display_id, $account', $php_access . ';');
   }
 
   ob_start();
@@ -157,4 +157,11 @@ function views_php_views_post_build($view) {
   if (!empty($view->views_php) && !empty($view->build_info['query']) && is_object($view->build_info['query'])) {
     $view->build_info['query']->range();
   }
+}
+
+/**
+ * Internal support: create_function() emulation using anonymous functions.
+ */
+function views_php_create_function($args, $code) {
+  return eval('return function (' . $args . ') {' . $code . '};');
 }
