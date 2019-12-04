@@ -69,7 +69,26 @@ class MandrillMailSystem implements MailSystemInterface {
     }
 
     // Extract an array of recipients.
-    $to = mandrill_get_to($message['to']);
+    $to = mandrill_get_to($message);
+
+    // Work through bcc emails.
+    if (!empty($message['headers']['Bcc'])) {
+
+      // Parse emails & turn comma-separated string into array.
+      $bcc_recipients = mandrill_map_mail_recipients($message['headers']['Bcc'], 'bcc');
+
+      // If 'bcc_email' wasn't explicitly set within the code & we have only
+      // one bcc recipient then we can use Mandrill's 'bcc_email' argument
+      // to set bcc recipient properly.
+      if (empty($message['bcc_email']) && count($bcc_recipients) == 1) {
+        $message['bcc_email'] = $bcc_recipients[0]['email'];
+      }
+      // Otherwise we have to add all bcc recipients to the list of primary
+      // recipients with "bcc" tag for each recipient.
+      else {
+        $to = array_merge($to, $bcc_recipients);
+      }
+    }
 
     // Prepare headers, defaulting the reply-to to the from address since
     // Mandrill needs the from address to be configured separately.
@@ -87,7 +106,13 @@ class MandrillMailSystem implements MailSystemInterface {
     if (isset($message['attachments']) && !empty($message['attachments'])) {
       foreach ($message['attachments'] as $attachment) {
         if (is_file($attachment)) {
-          $attachments[] = $this->getAttachmentStruct($attachment);
+          try {
+            $attachments[] = $this->getAttachmentStruct($attachment);
+          }
+          catch (\Exception $e) {
+            $attachments[] = NULL;
+            watchdog('php', 'Error message: %error\n%object', array('%error' => $e->getMessage() . ' Email was sent without this attachment: ' . $attachment . '\n File: ' . $e->getFile() . ' Line: ' . $e->getLine(), '%object' => 'Object: ' . var_export($attachment, TRUE)), WATCHDOG_ERROR);
+          }
         }
       }
     }
@@ -266,4 +291,34 @@ class MandrillMailSystem implements MailSystemInterface {
     return FALSE;
   }
 
+}
+
+/**
+ * Sends themable HTML emails through the Mandrill mail system.
+ *
+ * This class imitates the Mime Mail module and allows email messages to be
+ * themed and styled before being sent to Mandrill. It overcomes a problem that
+ * arises when using the Mime Mail and Mandrill modules together (see
+ * https://www.drupal.org/node/1863988) instead of producing
+ * a multipart email message, it feeds Mandrill the plain-text and the HTML
+ * version of the message separately.
+ */
+class MandrillHtmlMailSystem extends MandrillMailSystem {
+  /**
+   * Concatenate and wrap the email body for either plain-text or HTML emails.
+   *
+   * @param array $message
+   *   A message array, as described in hook_mail_alter().
+   *
+   * @return array
+   *   The formatted $message.
+   */
+  public function format(array $message) {
+    // Join the body array into one string.
+    if (is_array($message['body'])) {
+      $message['body'] = implode("\n\n", $message['body']);
+    }
+
+    return mandrill_prepare_message($message);
+  }
 }

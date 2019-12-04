@@ -161,7 +161,7 @@ function mandrill_mailsend($message, $function, $args = array()) {
       watchdog('mandrill', 'Error sending email from %from to %to. Function %function not found.',
         array(
           '%from' => $message['from_email'],
-          '%to' => $message['to'],
+          '%to' => $message['to'][0]['email'],
           '%function' => $function,
         ),
         WATCHDOG_ERROR
@@ -175,7 +175,7 @@ function mandrill_mailsend($message, $function, $args = array()) {
     if (!isset($response['status'])) {
       foreach ($response as $result) {
         // Allow other modules to react based on a send result.
-        module_invoke_all('mandrill_mailsend_result', $result);
+        module_invoke_all('mandrill_mailsend_result', $result, $params);
 
         switch ($result['status']) {
           case "error":
@@ -186,6 +186,16 @@ function mandrill_mailsend($message, $function, $args = array()) {
               $status = isset($result['status']) ? $result['status'] : 'message';
               $error_message = isset($result['message']) ? $result['message'] : 'no message';
               $debug = print_r($result, TRUE);
+
+              $severity = WATCHDOG_ERROR;
+              $return = FALSE;
+              // Since we cannot do much about normal mail bounces do not treat
+              // them as errors, just notices.
+              if (isset($result['reject_reason']) && in_array($result['reject_reason'], array('hard-bounce', 'soft-bounce', 'spam'))) {
+                $severity = WATCHDOG_NOTICE;
+                $return = TRUE;
+              }
+
               watchdog('mandrill', 'Failed sending email from %from to %to. @status: @message <pre>@debug</pre>',
                 array(
                   '%from' => $message['from_email'],
@@ -194,8 +204,9 @@ function mandrill_mailsend($message, $function, $args = array()) {
                   '@message' => $error_message,
                   '@debug' => $debug,
                 ),
-                WATCHDOG_ERROR
+                $severity
               );
+              return $return;
             }
             return FALSE;
 
@@ -224,7 +235,7 @@ function mandrill_mailsend($message, $function, $args = array()) {
       );
       return FALSE;
     }
-    return TRUE;
+    return $response;
   }
   catch (Mandrill_Error $e) {
     watchdog('mandrill', 'Error sending email from %from to %to. @code: @message',
@@ -350,6 +361,54 @@ function mandrill_get_module_key_names() {
   }
 
   return $name_array;
+}
+
+/**
+ * Runs the message through the theming system, and produces the correct
+ * plain-text message that will be fed to Mandrill.
+ */
+function mandrill_prepare_message($message) {
+    $module = $message['module'];
+    $key = $message['key'];
+    $to = $message['to'];
+    $subject = $message['subject'];
+    $body = $message['body'];
+
+    $hook = [
+        'mandrill_message__' . $key,
+        'mandrill_message__' . $module .'__'. $key,
+      ];
+
+    $variables = [
+        'module' => $module,
+        'key' => $key,
+        'recipient' => $to,
+        'subject' => $subject,
+        'body' => $body,
+      ];
+
+    $message['params']['plaintext'] = drupal_html_to_text($body);
+    $message['body'] = theme($hook, $variables);
+
+    return $message;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function mandrill_theme() {
+  $path = drupal_get_path('module', 'mandrill') . '/theme';
+
+  return [
+    'mandrill_message' => [
+        'variables' => ['module' => NULL, 'key' => NULL, 'recipient' => NULL, 'subject' => NULL, 'body' => NULL],
+        'template' => 'mandrill-message',
+        'pattern' => 'mandrill_message__',
+        'file' => 'mandrill.theme.inc',
+        'mail theme' => TRUE,
+        'path' => $path,
+      ]
+    ];
 }
 
 /**
@@ -569,26 +628,55 @@ function mandrill_mail_key_blacklist() {
 /**
  * Helper to generate an array of recipients.
  *
- * @param mixed $to
- *   a comma delimited list of email addresses in 1 of 2 forms:
- *   user@domain.com
- *   any number of names <user@domain.com>
- * 
+ * @param $message array
+ *   An array containing the email data.
+ *
  * @return array
- *   array of email addresses
+ *   An array of email addresses.
  */
-function mandrill_get_to($to) {
+function mandrill_get_to($message) {
+
+  // Turn comma-separated string of recipients into Mandrill-style array.
+  // See https://mandrillapp.com/api/docs/messages.html for reference.
+  $recipients = mandrill_map_mail_recipients($message['to']);
+
+  // Add "cc" recipients to the list of primary recipients with tag "cc".
+  // It will be later handled in Mandrill to set the right headers / recipients.
+  if (!empty($message['headers']['Cc'])) {
+    $recipients = array_merge($recipients, mandrill_map_mail_recipients($message['headers']['Cc'], 'cc'));
+    unset($message['headers']['Cc']);
+  }
+
+  return $recipients;
+}
+
+/**
+ * Parses & creates Mandrill-style array with recipients.
+ *
+ * @see https://mandrillapp.com/api/docs/messages.html
+ *
+ * @param $emails string
+ *   Comma-separated string with emails.
+ *
+ * @param string $type string
+ *   Type of email. Mandrill supports "to", "cc" and "bcc".
+ *
+ * @return array
+ *   Array of recipients.
+ */
+function mandrill_map_mail_recipients($emails, $type = 'to') {
   $recipients = array();
-  $to_array = explode(',', $to);
-  foreach ($to_array as $email) {
+  $email_array = explode(',', $emails);
+  foreach ($email_array as $email) {
     if (preg_match(MANDRILL_EMAIL_REGEX, $email, $matches)) {
       $recipients[] = array(
         'email' => $matches[2],
         'name' => $matches[1],
+        'type' => $type,
       );
     }
     else {
-      $recipients[] = array('email' => $email);
+      $recipients[] = array('email' => $email, 'type' => $type);
     }
   }
   return $recipients;
@@ -638,4 +726,11 @@ function mandrill_from($from = '') {
   }
 
   return array_merge($default, $provided);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function mandrill_form_mailsystem_admin_settings_alter(&$form, &$form_state, $form_id) {
+  $form['mailsystem']['mailsystem_theme']['#description'] .= t(" If using MandrillHtmlMailSystem above, you can control your email theming by copying file sites/all/modules/mandrill/theme/mandrill-message.tpl.php into your theme's templates directory. For example to sites/all/themes/theme-name/templates.");
 }

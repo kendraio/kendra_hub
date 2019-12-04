@@ -62,9 +62,7 @@ class MandrillReportsTestCase extends DrupalWebTestCase {
 
     $this->assertTrue(!empty($reports_data), 'Tested retrieving reports data.');
     $this->assertTrue(!empty($reports_data['user']), 'Tested user report data exists.');
-    $this->assertTrue(!empty($reports_data['tags']), 'Tested tags report data exists.');
     $this->assertTrue(!empty($reports_data['all_time_series']), 'Tested all time series report data exists.');
-    $this->assertTrue(!empty($reports_data['senders']), 'Tested senders report data exists.');
     $this->assertTrue(!empty($reports_data['urls']), 'Tested URLs report data exists.');
   }
 }
