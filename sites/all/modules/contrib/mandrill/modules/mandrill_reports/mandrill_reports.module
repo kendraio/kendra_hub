@@ -61,46 +61,8 @@ function mandrill_reports_data() {
     // Basic user info.
     $data['user'] = $api->users->info();
 
-    // Tags.
-    $tags = $api->tags->getList();
-    foreach ($tags as $tag) {
-      if (!empty($tag['tag'])) {
-        $data['tags'][$tag['tag']] = $api->tags->info($tag['tag']);
-        $data['tags'][$tag['tag']]['time_series'] = $api->tags->timeSeries($tag['tag']);
-      }
-    }
-
     // All time.
     $data['all_time_series'] = $api->tags->allTimeSeries();
-
-    // Senders: data is not being used, and the API currently (3/12/13) behaves
-    // badly if you have a bad email address anywhere in your sender history, so
-    // commenting out for now:
-    $senders = $api->senders->getList();
-    foreach ($senders as $sender) {
-      try {
-        $data['senders'][$sender['address']] = $api->senders->info($sender['address']);
-        $data['senders'][$sender['address']]['time_series'] = $api->senders->timeSeries($sender['address']);
-      }
-      catch (Mandrill_Error $e) {
-        watchdog('mandrill', 'An error occurred requesting sender information from Mandrill for address %address. "%message"', array(
-          '%address' => $sender['address'],
-          '%message' => $e->getMessage(),
-        ), WATCHDOG_ERROR);
-      }
-    }
-
-    // Urls.
-    $urls = $api->urls->getList();
-    foreach ($urls as $url) {
-      // Api has been intermittently tacking on incomplete $url arrays,
-      // so we have to check validity first:
-      if (isset($url['url'])) {
-        $data['urls'][$url['url']] = $url;
-        $data['urls'][$url['url']]['time_series'] = $api->urls->timeSeries($url['url']);
-      }
-    }
-    cache_set('mandrill_report_data', $data, 'cache', CACHE_TEMPORARY);
   }
   else {
     drupal_set_message(t('Please enter a Mandrill API key to use reports.'));
@@ -131,23 +93,6 @@ function mandrill_reports_dashboard_page() {
       'open_rate' => $series['sent'] == 0 ? 0 : $series['unique_opens'] / $series['sent'],
       'click_rate' => $series['sent'] == 0 ? 0 : $series['unique_clicks'] / $series['sent'],
     );
-  }
-
-  // Url table.
-  $rows = array();
-  $header = array(
-    t('URL'),
-    t('Delivered'),
-    t('Unique clicks'),
-    t('Total Clicks'),
-  );
-  foreach ($data['urls'] as $url) {
-    $percent = $url['sent'] == 0 ? 0 : number_format($url['unique_clicks'] / $url['sent'], 2) * 100;
-    $rows[] = array(
-      l($url['url'], $url['url']),
-      $url['sent'],
-      $url['unique_clicks'] . "({$percent}%)",
-      $url['clicks']);
   }
 
   $path = drupal_get_path('module', 'mandrill_reports');
@@ -181,12 +126,6 @@ function mandrill_reports_dashboard_page() {
     'engagement' => array(
       '#prefix' => '<h2>' . t('Average Open and Click Rate') . '</h2>',
       '#markup' => '<div id="mandrill-engage-chart"></div>',
-    ),
-    'urls' => array(
-      '#prefix' => '<h2>' . t('Tracked URLs') . '</h2>',
-      '#theme' => 'table',
-      '#header' => $header,
-      '#rows' => $rows,
     ),
   );
 

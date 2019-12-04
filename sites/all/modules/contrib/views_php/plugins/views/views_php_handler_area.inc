@@ -34,9 +34,9 @@ class views_php_handler_area extends views_handler_area {
    * Implements views_handler_area#render().
    */
   function render($empty = FALSE) {
-    // Ecexute output PHP code.
+    // Execute output PHP code.
     if ((!$empty || !empty($this->options['empty'])) && !empty($this->options['php_output'])) {
-      $function = create_function('$view, $handler, $results', ' ?>' . $this->options['php_output'] . '<?php ');
+      $function = views_php_create_function('$view, $handler, $results', ' ?>' . $this->options['php_output'] . '<?php ');
       ob_start();
       $function($this->view, $this, $this->view->result);
       return ob_get_clean();

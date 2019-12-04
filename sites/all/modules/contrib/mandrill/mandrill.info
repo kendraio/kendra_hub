@@ -14,9 +14,8 @@ files[] = tests/includes/mandrill_test.inc
 files[] = tests/mandrill.test
 files[] = tests/mandrill_hooks.test
 
-; Information added by Drupal.org packaging script on 2016-04-19
-version = "7.x-2.3"
+; Information added by Drupal.org packaging script on 2019-04-19
+version = "7.x-2.4"
 core = "7.x"
 project = "mandrill"
-datestamp = "1461103449"
-
+datestamp = "1555698185"

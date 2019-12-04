@@ -8,10 +8,10 @@
 define('FONTAWESOME_LIBRARY', 'fontawesome');
 define('FONTAWESOME_NAME', 'Font Awesome');
 define('FONTAWESOME_URL', 'https://fontawesome.com/');
-define('FONTAWESOME_CDN_CSS_URL', 'https://use.fontawesome.com/releases/v5.5.0/css/all.css');
-define('FONTAWESOME_CDN_SVG_URL', 'https://use.fontawesome.com/releases/v5.5.0/js/all.js');
-define('FONTAWESOME_CDN_SHIM_URL', 'https://use.fontawesome.com/releases/v5.5.0/js/v4-shims.js');
-define('FONTAWESOME_DOWNLOAD_URL', 'https://use.fontawesome.com/releases/v5.5.0/fontawesome-free-5.5.0-web.zip');
+define('FONTAWESOME_CDN_CSS_URL', 'https://use.fontawesome.com/releases/v5.8.2/css/all.css');
+define('FONTAWESOME_CDN_SVG_URL', 'https://use.fontawesome.com/releases/v5.8.2/js/all.js');
+define('FONTAWESOME_CDN_SHIM_URL', 'https://use.fontawesome.com/releases/v5.8.2/js/v4-shims.js');
+define('FONTAWESOME_DOWNLOAD_URL', 'https://use.fontawesome.com/releases/v5.8.2/fontawesome-free-5.8.2-web.zip');
 define('FONTAWESOME_PREFIX', 'fa');
 
 /**
@@ -70,6 +70,63 @@ function fontawesome_libraries_info() {
     ),
   );
 
+  // SVG wtih JS base library.
+  $libraries[FONTAWESOME_LIBRARY . '_svg_base'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_base']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_base']['files'] = array(
+    'js' => array(
+      'js/fontawesome.js',
+    ),
+  );
+
+  // SVG wtih JS solid library.
+  $libraries[FONTAWESOME_LIBRARY . '_svg_solid'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_solid']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_solid']['files'] = array(
+    'js' => array(
+      'js/solid.js',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_svg_base',
+  );
+
+  // SVG wtih JS regular library.
+  $libraries[FONTAWESOME_LIBRARY . '_svg_regular'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_regular']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_regular']['files'] = array(
+    'js' => array(
+      'js/regular.js',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_svg_base',
+  );
+
+  // SVG wtih JS light library.
+  $libraries[FONTAWESOME_LIBRARY . '_svg_light'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_light']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_light']['files'] = array(
+    'js' => array(
+      'js/light.js',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_svg_base',
+  );
+
+  // SVG wtih JS brands library.
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['files'] = array(
+    'js' => array(
+      'js/brands.js',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_svg_base',
+  );
+
   // SVG wtih JS shim library.
   $libraries[FONTAWESOME_LIBRARY . '_shim'] = $library_core;
   $libraries[FONTAWESOME_LIBRARY . '_shim']['machine name'] = FONTAWESOME_LIBRARY;
@@ -88,6 +145,63 @@ function fontawesome_libraries_info() {
     ),
   );
 
+  // SVG wtih JS base library.
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_base'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_base']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_base']['files'] = array(
+    'css' => array(
+      'css/fontawesome.css',
+    ),
+  );
+
+  // SVG wtih JS solid library.
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_solid'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_solid']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_solid']['files'] = array(
+    'css' => array(
+      'css/solid.css',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_webfonts_base',
+  );
+
+  // SVG wtih JS regular library.
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_regular'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_regular']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_regular']['files'] = array(
+    'css' => array(
+      'css/regular.css',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_webfonts_base',
+  );
+
+  // SVG wtih JS light library.
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_light'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_light']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_light']['files'] = array(
+    'css' => array(
+      'css/light.css',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_webfonts_base',
+  );
+
+  // SVG wtih JS brands library.
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands'] = $library_core;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['machine name'] = FONTAWESOME_LIBRARY;
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['files'] = array(
+    'css' => array(
+      'css/brands.css',
+    ),
+  );
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+    FONTAWESOME_LIBRARY . '_webfonts_base',
+  );
+
   return $libraries;
 }
 
@@ -95,7 +209,7 @@ function fontawesome_libraries_info() {
  * Callback to determine fontawesome version number.
  */
 function _fontawesome_version() {
-  return '5.5.0';
+  return '5.8.2';
 }
 
 /**
@@ -119,9 +233,9 @@ function fontawesome_preprocess_html_tag(&$vars) {
         $path = $external_settings['external_location'];
       }
       else {
-        $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method);
+        $library = libraries_detect(FONTAWESOME_LIBRARY . '_' . $method);
         reset($library['files']['js']);
-        $path = $library['library path'] . '/' . key($library['files']['js']);
+        $path = $library['library path'];
       }
 
       // Check if this is the javascript.
@@ -131,6 +245,32 @@ function fontawesome_preprocess_html_tag(&$vars) {
     }
   }
   return;
+}
+
+/**
+ * Unparses a CDN URL for use with individual Font Awesome file inclusions.
+ *
+ * @param array $parsed
+ *   Array containing URL parsed data.
+ *
+ * @return string
+ *   The unparsed URL for the CDN.
+ */
+function _fontawesome_unparse_url(array $parsed) {
+  $get = function ($key) use ($parsed) {
+    return isset($parsed[$key]) ? $parsed[$key] : NULL;
+  };
+
+  $pass = $get('pass');
+  $user = $get('user');
+  $userinfo = $pass !== NULL ? "$user:$pass" : $user;
+  $port = $get('port');
+  $scheme = $get('scheme');
+  $query = $get('query');
+  $fragment = $get('fragment');
+  $authority = ($userinfo !== NULL ? "$userinfo@" : '') . $get('host') . ($port ? ":$port" : '');
+
+  return (strlen($scheme) ? "$scheme:" : '') . (strlen($authority) ? "//$authority" : '') . $get('path') . (strlen($query) ? "?$query" : '') . (strlen($fragment) ? "#$fragment" : '');
 }
 
 /**
@@ -152,45 +292,190 @@ function fontawesome_preprocess_html() {
     'external_location' => '',
   ));
 
+  $partial_files_settings = variable_get('fontawesome_partial', array(
+    'use_solid_file' => TRUE,
+    'use_regular_file' => TRUE,
+    'use_light_file' => TRUE,
+    'use_brands_file' => TRUE,
+  ));
+
   // Check if we are using the CDN.
   if ($external_settings['use_cdn']) {
-    // Webfonts.
-    if ($method == 'webfonts') {
-      // Load the file.
-      drupal_add_css($external_settings['external_location'], array(
-        'type' => 'external',
-        'group' => CSS_THEME,
-        'every_page' => TRUE,
-      ));
-    }
-    // SVG with JS.
-    elseif ($method == 'svg') {
-      // Load the file.
-      drupal_add_js($external_settings['external_location'], array(
-        'type' => 'external',
-        'scope' => 'footer',
-        'group' => JS_THEME,
-        'every_page' => TRUE,
-        'weight' => 10,
-      ));
-      // Handle backwards compatibility shim file.
-      if ($shim_settings['use_shim']) {
-        drupal_add_js($shim_settings['external_location'], array(
+
+    // First check if we're using everything.
+    if ($partial_files_settings['use_solid_file'] && $partial_files_settings['use_regular_file'] && $partial_files_settings['use_light_file'] && $partial_files_settings['use_brands_file']) {
+      // Webfonts.
+      if ($method == 'webfonts') {
+        // Load the file.
+        drupal_add_css($external_settings['external_location'], array(
+          'type' => 'external',
+          'group' => CSS_THEME,
+          'every_page' => TRUE,
+        ));
+      }
+      // SVG with JS.
+      elseif ($method == 'svg') {
+        // Load the file.
+        drupal_add_js($external_settings['external_location'], array(
           'type' => 'external',
           'scope' => 'footer',
           'group' => JS_THEME,
           'every_page' => TRUE,
-          'weight' => 11,
+          'weight' => 10,
         ));
       }
+    }
+    else {
+      // Determine the base for the CDN.
+      $cdn_components = parse_url($external_settings['external_location']);
+      $cdn_components['path'] = explode('/', $cdn_components['path']);
+      unset($cdn_components['path'][count($cdn_components['path']) - 1]);
+      $cdn_components['path'] = implode('/', $cdn_components['path']) . '/';
+      $cdn_components = _fontawesome_unparse_url($cdn_components);
+
+      // Webfonts.
+      if ($method == 'webfonts') {
+        // Load the base file.
+        drupal_add_css($cdn_components . 'fontawesome.css', array(
+          'type' => 'external',
+          'group' => CSS_THEME,
+          'every_page' => TRUE,
+        ));
+        if ($partial_files_settings['use_solid_file']) {
+          // Load the solid file.
+          drupal_add_css($cdn_components . 'solid.css', array(
+            'type' => 'external',
+            'group' => CSS_THEME,
+            'every_page' => TRUE,
+          ));
+        }
+        if ($partial_files_settings['use_regular_file']) {
+          // Load the regular file.
+          drupal_add_css($cdn_components . 'regular.css', array(
+            'type' => 'external',
+            'group' => CSS_THEME,
+            'every_page' => TRUE,
+          ));
+        }
+        if ($partial_files_settings['use_light_file']) {
+          // Load the light file.
+          drupal_add_css($cdn_components . 'light.css', array(
+            'type' => 'external',
+            'group' => CSS_THEME,
+            'every_page' => TRUE,
+          ));
+        }
+        if ($partial_files_settings['use_brands_file']) {
+          // Load the brands file.
+          drupal_add_css($cdn_components . 'brands.css', array(
+            'type' => 'external',
+            'group' => CSS_THEME,
+            'every_page' => TRUE,
+          ));
+        }
+      }
+      // SVG with JS.
+      elseif ($method == 'svg') {
+        // Load the base file.
+        drupal_add_js($cdn_components . 'fontawesome.js', array(
+          'type' => 'external',
+          'scope' => 'footer',
+          'group' => JS_THEME,
+          'every_page' => TRUE,
+          'weight' => 10,
+        ));
+        if ($partial_files_settings['use_solid_file']) {
+          // Load the solid file.
+          drupal_add_js($cdn_components . 'solid.js', array(
+            'type' => 'external',
+            'scope' => 'footer',
+            'group' => JS_THEME,
+            'every_page' => TRUE,
+            'weight' => 10,
+          ));
+        }
+        if ($partial_files_settings['use_regular_file']) {
+          // Load the regular file.
+          drupal_add_js($cdn_components . 'regular.js', array(
+            'type' => 'external',
+            'scope' => 'footer',
+            'group' => JS_THEME,
+            'every_page' => TRUE,
+            'weight' => 10,
+          ));
+        }
+        if ($partial_files_settings['use_light_file']) {
+          // Load the light file.
+          drupal_add_js($cdn_components . 'light.js', array(
+            'type' => 'external',
+            'scope' => 'footer',
+            'group' => JS_THEME,
+            'every_page' => TRUE,
+            'weight' => 10,
+          ));
+        }
+        if ($partial_files_settings['use_brands_file']) {
+          // Load the brands file.
+          drupal_add_js($cdn_components . 'brands.js', array(
+            'type' => 'external',
+            'scope' => 'footer',
+            'group' => JS_THEME,
+            'every_page' => TRUE,
+            'weight' => 10,
+          ));
+        }
+      }
+    }
+
+    // Handle backwards compatibility shim file.
+    if ($method == 'svg' && $shim_settings['use_shim']) {
+      drupal_add_js($shim_settings['external_location'], array(
+        'type' => 'external',
+        'scope' => 'footer',
+        'group' => JS_THEME,
+        'every_page' => TRUE,
+        'weight' => 11,
+      ));
     }
   }
   // Loading local library.
   else {
-    $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method);
-    if (!$library['loaded']) {
-      drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+    // First check if we're using everything.
+    if ($partial_files_settings['use_solid_file'] && $partial_files_settings['use_regular_file'] && $partial_files_settings['use_light_file'] && $partial_files_settings['use_brands_file']) {
+      // Load the main library.
+      $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method);
+      if (!$library['loaded']) {
+        drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+      }
     }
+    // Else we attach the libraries piecemeal.
+    else {
+      if ($partial_files_settings['use_solid_file']) {
+        $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method . '_solid');
+        if (!$library['loaded']) {
+          drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+        }
+      }
+      if ($partial_files_settings['use_regular_file']) {
+        $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method . '_regular');
+        if (!$library['loaded']) {
+          drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+        }
+      }
+      if ($partial_files_settings['use_light_file']) {
+        $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method . '_light');
+        if (!$library['loaded']) {
+          drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+        }
+      }
+      if ($partial_files_settings['use_brands_file']) {
+        $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $method . '_brands');
+        if (!$library['loaded']) {
+          drupal_set_message($library['error message'] . ' ' . t('Please make sure that Font Awesome was downloaded and extracted in the sites/all/libraries/fontawesome directory. Please check README.txt for more details.'), 'warning');
+        }
+      }
+    }
+
     // Handle backwards compatibility shim file.
     if ($method == 'svg' && $shim_settings['use_shim']) {
       $library = libraries_load(FONTAWESOME_LIBRARY . '_shim');
@@ -278,7 +563,7 @@ function fontawesome_get_metadata_filepath() {
   $library = libraries_load(FONTAWESOME_LIBRARY . '_svg');
 
   // Attempt to load the icons from the local library's metadata if possible.
-  $metadataFile = drupal_realpath($library['library path'] . '/advanced-options/metadata/icons.json');
+  $metadataFile = drupal_realpath($library['library path'] . '/metadata/icons.json');
   // If we can't load the local file, use the included module icons file.
   if (!file_exists($metadataFile)) {
     $metadataFile = drupal_get_path('module', 'fontawesome') . '/metadata/icons.json';

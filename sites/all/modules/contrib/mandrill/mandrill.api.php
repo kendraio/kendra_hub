@@ -40,8 +40,10 @@ function hook_mandrill_valid_attachment_types_alter(&$types) {
  *
  * @param array $result
  *   Associative array containing the send result, including the status.
+ * @param array $params
+ *   Associative array containing the message information sent to Mandrill.
  */
-function hook_mandrill_mailsend_result($result) {
+function hook_mandrill_mailsend_result($result, $params) {
   if ($result['status'] == 'rejected') {
     // Delete user.
     $user = user_load_by_mail($result['email']);

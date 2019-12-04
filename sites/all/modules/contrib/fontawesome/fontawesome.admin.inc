@@ -21,7 +21,7 @@ function fontawesome_admin_settings_form() {
     ),
     '#default_value' => variable_get('fontawesome_method', 'svg'),
     '#description' => t('This setting controls the way Font Awesome works. SVG with JS is the modern, easy, and powerful version with the most backwards compatibility. Web Fonts with CSS is the classic Font Awesome icon method that you have seen in earlier versions of Font Awesome. We recommend SVG with JS. Please note that the Webfonts with CSS version does not allow backwards compatibility with Font Awesome 4. That means you will need to check your code base to be certain that the icons are all updated to work with version 5. See !gettingStartedLink for more information.', array(
-      '!gettingStartedLink' => l(t('the Font Awesome guide'), 'https://fontawesome.com/get-started'),
+      '!gettingStartedLink' => l(t('the Font Awesome guide'), 'https://fontawesome.com/start'),
     )),
   );
 
@@ -29,7 +29,7 @@ function fontawesome_admin_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Allow CSS pseudo-elements?'),
     '#description' => t('If you do not want to add icons directly in code, you can add them through CSS pseudo-elements. Font Awesome has leveraged the ::before pseudo-element to add icons to a page since the very beginning. For more information on how to use pseudo-elements, see the !pseudoElementsLink. Note that this feature is always available with the Webfonts version of Font Awesome. If you turn this feature on for SVG with JS, it will slow your site down noticeably.', array(
-      '!pseudoElementsLink' => l(t('Font Awesome guide to pseudo-elements'), 'https://fontawesome.com/how-to-use/web-fonts-with-css#pseudo-elements'),
+      '!pseudoElementsLink' => l(t('Font Awesome guide to pseudo-elements'), 'https://fontawesome.com/how-to-use/on-the-web/advanced/css-pseudo-elements'),
     )),
     '#default_value' => variable_get('fontawesome_allow_pseudo_elements', FALSE),
   );
@@ -71,6 +71,45 @@ function fontawesome_admin_settings_form() {
     ),
   );
 
+  $defaults = variable_get('fontawesome_partial', array(
+    'use_solid_file' => NULL,
+    'use_regular_file' => NULL,
+    'use_light_file' => NULL,
+    'use_brands_file' => NULL,
+  ));
+  $form['fontawesome_partial'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => TRUE,
+    '#title' => t('Partial file configuration'),
+    '#description' => t('By default, Font Awesome loads all of the icons. However, you can choose to load only some of the icon files if you only want a subset of the available icons. This method can result in reduced file size. These files will be assumed to exist in the same directory as the parent <i>all.js/all.css</i> file.'),
+    'use_solid_file' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Load solid icons'),
+      '#description' => t('Checking this box will cause the Font Awesome library to load the file containing the solid icon declarations (<i>solid.js/solid.css</i>)'),
+      '#default_value' => is_null($defaults['use_solid_file']) === TRUE ? TRUE : $defaults['use_solid_file'],
+    ),
+    'use_regular_file' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Load regular icons'),
+      '#description' => t('Checking this box will cause the Font Awesome library to load the file containing the regular icon declarations (<i>regular.js/regular.css</i>)'),
+      '#default_value' => is_null($defaults['use_regular_file']) === TRUE ? TRUE : $defaults['use_regular_file'],
+    ),
+    'use_light_file' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Load light icons'),
+      '#description' => t('Checking this box will cause the Font Awesome library to load the file containing the light icon declarations (<i>light.js/light.css</i>). Note that this a Pro-only feature.'),
+      '#default_value' => is_null($defaults['use_light_file']) === TRUE ? TRUE : $defaults['use_light_file'],
+    ),
+    'use_brands_file' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Load brand icons'),
+      '#description' => t('Checking this box will cause the Font Awesome library to load the file containing the brands icon declarations (<i>brands.js/brands.css</i>)'),
+      '#default_value' => is_null($defaults['use_brands_file']) === TRUE ? TRUE : $defaults['use_brands_file'],
+    ),
+  );
+
   $defaults = variable_get('fontawesome_shim', array(
     'use_shim' => FALSE,
     'external_location' => '',
@@ -82,7 +121,7 @@ function fontawesome_admin_settings_form() {
     '#tree' => TRUE,
     '#title' => t('Version 4 Backwards Compatibility'),
     '#description' => t('Version 5 of Font Awesome has some changes which require modifications to the way you declare many of your icons. The settings below are designed to ease that transition. See !upgradingLink for more information.', array(
-      '!upgradingLink' => l(t('the Font Awesome guide to upgrading version 4 to version 5'), 'https://fontawesome.com/how-to-use/upgrading-from-4'),
+      '!upgradingLink' => l(t('the Font Awesome guide to upgrading version 4 to version 5'), 'https://fontawesome.com/how-to-use/on-the-web/setup/upgrading-from-version-4'),
     )),
     // Webfonts with CSS does not support shims.
     '#states' => array(
@@ -121,9 +160,8 @@ function fontawesome_admin_settings_form() {
     '#collapsed' => FALSE,
     '#tree' => TRUE,
     '#title' => t('Version 4 Backwards Compatibility'),
-    '#description' => t('<strong>The Webfonts with CSS version of Font Awesome does not support backwards compatibility with Font Awesome 4.0.</strong> If you are using Webfonts, please make certain that the icons in your code base are updated to work with the 5.0 version of Font Awesome. See !upgradingLink and !webfontsLink for more information.', array(
-      '!upgradingLink' => l(t('the Font Awesome guide to upgrading version 4 to version 5'), 'https://fontawesome.com/how-to-use/upgrading-from-4'),
-      '!webfontsLink' => l(t('the Font Awesome Webfonts guide'), 'https://fontawesome.com/get-started/web-fonts-with-css'),
+    '#description' => t('<strong>The Webfonts with CSS version of Font Awesome does not support backwards compatibility with Font Awesome 4.0.</strong> If you are using Webfonts, please make certain that the icons in your code base are updated to work with the 5.0 version of Font Awesome. See !upgradingLink for more information.', array(
+      '!upgradingLink' => l(t('the Font Awesome guide to upgrading version 4 to version 5'), 'https://fontawesome.com/how-to-use/on-the-web/setup/upgrading-from-version-4'),
     )),
     '#states' => array(
       'visible' => array(
@@ -143,6 +181,7 @@ function fontawesome_admin_settings_form() {
  * Implements hook_form_submit().
  */
 function fontawesome_admin_settings_form_submit($form, &$form_state) {
+
   // Load the library.
   $library = libraries_load(FONTAWESOME_LIBRARY . '_' . $form_state['values']['fontawesome_method']);
 
