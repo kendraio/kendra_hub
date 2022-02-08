@@ -59,25 +59,24 @@
 function theme_date_display_combination($variables) {
   static $repeating_ids = array();
 
-  $entity_type = $variables['entity_type'];
-  $entity      = $variables['entity'];
-  $field       = $variables['field'];
-  $instance    = $variables['instance'];
-  $langcode    = $variables['langcode'];
-  $item        = $variables['item'];
-  $delta       = $variables['delta'];
-  $display     = $variables['display'];
-  $field_name  = $field['field_name'];
-  $formatter   = $display['type'];
-  $options     = $display['settings'];
-  $dates       = $variables['dates'];
-  $attributes  = $variables['attributes'];
-  $rdf_mapping = $variables['rdf_mapping'];
-  $add_rdf     = $variables['add_rdf'];
-  $microdata   = $variables['microdata'];
+  $entity_type   = $variables['entity_type'];
+  $entity        = $variables['entity'];
+  $field         = $variables['field'];
+  $instance      = $variables['instance'];
+  $langcode      = $variables['langcode'];
+  $item          = $variables['item'];
+  $delta         = $variables['delta'];
+  $display       = $variables['display'];
+  $field_name    = $field['field_name'];
+  $formatter     = $display['type'];
+  $options       = $display['settings'];
+  $dates         = $variables['dates'];
+  $attributes    = $variables['attributes'];
+  $rdf_mapping   = $variables['rdf_mapping'];
+  $add_rdf       = $variables['add_rdf'];
+  $microdata     = $variables['microdata'];
   $add_microdata = $variables['add_microdata'];
-  $precision   = date_granularity_precision($field['settings']['granularity']);
-  $show_remaining_days = $variables['show_remaining_days'];
+  $precision     = date_granularity_precision($field['settings']['granularity']);
 
   $output = '';
 
@@ -117,6 +116,26 @@ function theme_date_display_combination($variables) {
     $element['#entity'] = $entity;
   }
 
+  // Verify these variables exist.
+  if (!isset($dates['value']['formatted'])) {
+    $dates['value']['formatted'] = '';
+  }
+  if (!isset($dates['value2']['formatted'])) {
+    $dates['value2']['formatted'] = '';
+  }
+  if (!isset($dates['value']['formatted_time'])) {
+    $dates['value']['formatted_time'] = '';
+  }
+  if (!isset($dates['value2']['formatted_time'])) {
+    $dates['value2']['formatted_time'] = '';
+  }
+  if (!isset($dates['value']['formatted_timezone'])) {
+    $dates['value']['formatted_timezone'] = '';
+  }
+  if (!isset($dates['value2']['formatted_timezone'])) {
+    $dates['value2']['formatted_timezone'] = '';
+  }
+
   switch ($options['fromto']) {
     case 'value':
       $date1 = $dates['value']['formatted'];
@@ -131,6 +150,7 @@ function theme_date_display_combination($variables) {
     default:
       $date1 = $dates['value']['formatted'];
       $date2 = $dates['value2']['formatted'];
+      break;
   }
 
   // Pull the timezone, if any, out of the formatted result and tack it back on
@@ -155,9 +175,9 @@ function theme_date_display_combination($variables) {
 
   // Check remaining days.
   $show_remaining_days = '';
-  if (!empty($variables['show_remaining_days'])) {
-    $remaining_days = floor((strtotime($variables['dates']['value']['formatted_iso'])
-    - strtotime('now')) / (24 * 3600));
+  if (!empty($variables['show_remaining_days']) && isset($variables['dates']['value']['formatted_iso'])) {
+    $remaining_days = $variables['dates']['value']['formatted_iso'];
+    $remaining_days = floor((strtotime($remaining_days) - strtotime('now')) / (24 * 3600));
 
     // Show remaining days only for future events.
     if ($remaining_days >= 0) {
@@ -338,7 +358,7 @@ function theme_date_display_range($variables) {
   $timezone = $variables['timezone'];
   $attributes_start = $variables['attributes_start'];
   $attributes_end = $variables['attributes_end'];
-  $show_remaining_days = $variables['show_remaining_days'];
+  $show_remaining_days = isset($variables['show_remaining_days']) ? $variables['show_remaining_days'] : '';
 
   $start_date = '<span class="date-display-start"' . drupal_attributes($attributes_start) . '>' . $date1 . '</span>';
   $end_date = '<span class="date-display-end"' . drupal_attributes($attributes_end) . '>' . $date2 . $timezone . '</span>';
@@ -464,7 +484,15 @@ function theme_date_form_element($variables) {
   // Detect if there is more than one subfield.
   $count = count(explode('<label', $element['#children'])) - 1;
   if ($count == 1) {
-    $element['#title_display'] = 'none';
+    // If there is only one subfield, hide the label of the main field only if
+    // the label of the subfield is visible.
+    if (empty($variables['element']['value']['#instance'])
+      || empty($variables['element']['value']['#instance']['widget'])
+      || empty($variables['element']['value']['#instance']['widget']['settings'])
+      || empty($variables['element']['value']['#instance']['widget']['settings']['label_position'])
+      || $variables['element']['value']['#instance']['widget']['settings']['label_position'] != 'none') {
+      $element['#title_display'] = 'none';
+    }
   }
 
   // Wrap children with a div and add an extra class if element is multiline.

@@ -314,7 +314,7 @@ class views_plugin_display extends views_plugin {
         }
       }
       $pager = $this->get_plugin('pager');
-      if (isset($pager) && $pager->uses_exposed()) {
+      if ($pager && $pager->uses_exposed()) {
         $this->has_exposed = TRUE;
         return TRUE;
       }
@@ -872,13 +872,13 @@ class views_plugin_display extends views_plugin {
       return $this->get_option('path');
     }
 
+    if ($this->get_option('link_display') == 'custom_url' && $link_url = $this->get_option('link_url')) {
+      return $link_url;
+    }
+
     $display_id = $this->get_link_display();
     if ($display_id && !empty($this->view->display[$display_id]) && is_object($this->view->display[$display_id]->handler)) {
       return $this->view->display[$display_id]->handler->get_path();
-    }
-
-    if ($this->get_option('link_display') == 'custom_url' && $link_url = $this->get_option('link_url')) {
-      return $link_url;
     }
   }
 
@@ -1400,9 +1400,8 @@ class views_plugin_display extends views_plugin {
       '***DEFAULT_LANGUAGE***' => t("Default site language"),
       LANGUAGE_NONE => t('Language neutral'),
     );
-    if (module_exists('locale')) {
-      $languages = array_merge($languages, locale_language_list());
-    }
+    $languages = array_merge($languages, views_language_list());
+
     $field_language = array();
     $options['field_language'] = array(
       'category' => 'other',
@@ -1559,6 +1558,7 @@ class views_plugin_display extends views_plugin {
           '#type' => 'textfield',
           '#description' => t('This name will appear only in the administrative interface for the View.'),
           '#default_value' => $this->display->display_title,
+          '#maxlength' => 64,
         );
         $form['display_description'] = array(
           '#title' => t('Description'),

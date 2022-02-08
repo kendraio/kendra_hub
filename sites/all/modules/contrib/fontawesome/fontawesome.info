@@ -5,8 +5,8 @@ core = 7.x
 dependencies[] = libraries (>=7.x-2.0)
 configure = admin/config/content/fontawesome
 
-; Information added by Drupal.org packaging script on 2019-05-11
-version = "7.x-3.11"
+; Information added by Drupal.org packaging script on 2020-07-02
+version = "7.x-3.13"
 core = "7.x"
 project = "fontawesome"
-datestamp = "1557577988"
+datestamp = "1593707997"

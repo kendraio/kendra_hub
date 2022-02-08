@@ -10,6 +10,9 @@
  */
 class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
 
+  const INSTANCE_SETTINGS_MIN = -100000;
+  const INSTANCE_SETTINGS_MAX = 100000;
+
   /**
    * Meta information about tests.
    */
@@ -96,7 +99,6 @@ class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
     $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
 
     // Test field widget validation error messages.
-    //
     // Only numbers are allowed.
     $incorrect_entries = array(
       array('from' => 'A', 'to' => 'Z'),
@@ -104,6 +106,7 @@ class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
       array('from' => '-1.0', 'to' => '2-'),
       array('from' => '0A', 'to' => '9Z'),
       array('from' => '-1-', 'to' => '2-2'),
+      array('from' => '-', 'to' => '-'),
     );
 
     foreach ($incorrect_entries as $entries) {
@@ -116,6 +119,26 @@ class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
       $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
       $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_TO_LABEL));
       $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    }
+
+    $correct_entries = array(
+      array('from' => '-200', 'to' => '-100'),
+      array('from' => '-3', 'to' => '99'),
+      array('from' => '0', 'to' => '9'),
+      array('from' => '1', 'to' => '5'),
+      array('from' => '10000', 'to' => '20000'),
+    );
+
+    foreach ($correct_entries as $entries) {
+      $edit = array(
+        "{$form_element_key}[from]" => $entries['from'],
+        "{$form_element_key}[to]" => $entries['to'],
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $this->assertNoRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+      $error_message = t('Only numbers are allowed in %field.', array('%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $this->assertNoRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
     }
   }
 
@@ -134,28 +157,14 @@ class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
     $form_element_key = $field_name . '[' . LANGUAGE_NONE . '][0]';
 
     // Test field widget validation error messages.
-    //
-    // Only numbers and the decimal separator allowed.
+    // Only numbers and one decimal separator allowed.
     $incorrect_entries = array(
       array('from' => 'A', 'to' => 'Z'),
       array('from' => '1..0', 'to' => '2.0.0'),
       array('from' => '-1.0.', 'to' => '2-.'),
       array('from' => '0A', 'to' => '9Z'),
       array('from' => '-1.0-', 'to' => '2.0-2'),
-    );
-    foreach ($incorrect_entries as $entries) {
-      $edit = array(
-        "{$form_element_key}[from]" => $entries['from'],
-        "{$form_element_key}[to]" => $entries['to'],
-      );
-      $this->drupalPost(NULL, $edit, t('Save'));
-      $error_message = t('Only numbers and the decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
-      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
-      $error_message = t('Only numbers and the decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
-      $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
-    }
-    // There should only be one decimal separator.
-    $incorrect_entries = array(
+      array('from' => '-', 'to' => '--'),
       array('from' => '1,,0', 'to' => '2,0,0'),
       array('from' => '-1,0,', 'to' => '2,,'),
       array('from' => '-1,0,,0', 'to' => ',,2'),
@@ -166,10 +175,29 @@ class RangeFieldWidgetValidationTestCase extends RangeBaseWebTestCase {
         "{$form_element_key}[to]" => $entries['to'],
       );
       $this->drupalPost(NULL, $edit, t('Save'));
-      $error_message = t('%field: There should only be one decimal separator (@separator).', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $error_message = t('Only numbers and one decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
       $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
-      $error_message = t('%field: There should only be one decimal separator (@separator).', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $error_message = t('Only numbers and one decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
       $this->assertRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+    }
+
+    $correct_entries = array(
+      array('from' => '-200,00', 'to' => '-100,89'),
+      array('from' => '-3,9', 'to' => '99,0'),
+      array('from' => '0', 'to' => '9'),
+      array('from' => '1', 'to' => '5'),
+      array('from' => '10000,99293993', 'to' => '20000,3487693476'),
+    );
+    foreach ($correct_entries as $entries) {
+      $edit = array(
+        "{$form_element_key}[from]" => $entries['from'],
+        "{$form_element_key}[to]" => $entries['to'],
+      );
+      $this->drupalPost(NULL, $edit, t('Save'));
+      $error_message = t('Only numbers and one decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_FROM_LABEL));
+      $this->assertNoRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
+      $error_message = t('Only numbers and one decimal separator (@separator) allowed in %field.', array('@separator' => static::FIELD_SETTINGS_DECIMAL_SEPARATOR, '%field' => static::INSTANCE_SETTINGS_TO_LABEL));
+      $this->assertNoRaw($error_message, format_string('Correct widget validation error message found on the page: !error_message', array('!error_message' => $error_message)));
     }
   }
 

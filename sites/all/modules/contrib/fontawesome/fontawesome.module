@@ -8,10 +8,10 @@
 define('FONTAWESOME_LIBRARY', 'fontawesome');
 define('FONTAWESOME_NAME', 'Font Awesome');
 define('FONTAWESOME_URL', 'https://fontawesome.com/');
-define('FONTAWESOME_CDN_CSS_URL', 'https://use.fontawesome.com/releases/v5.8.2/css/all.css');
-define('FONTAWESOME_CDN_SVG_URL', 'https://use.fontawesome.com/releases/v5.8.2/js/all.js');
-define('FONTAWESOME_CDN_SHIM_URL', 'https://use.fontawesome.com/releases/v5.8.2/js/v4-shims.js');
-define('FONTAWESOME_DOWNLOAD_URL', 'https://use.fontawesome.com/releases/v5.8.2/fontawesome-free-5.8.2-web.zip');
+define('FONTAWESOME_CDN_CSS_URL', 'https://use.fontawesome.com/releases/v5.11.2/css/all.css');
+define('FONTAWESOME_CDN_SVG_URL', 'https://use.fontawesome.com/releases/v5.11.2/js/all.js');
+define('FONTAWESOME_CDN_SHIM_URL', 'https://use.fontawesome.com/releases/v5.11.2/js/v4-shims.js');
+define('FONTAWESOME_DOWNLOAD_URL', 'https://use.fontawesome.com/releases/v5.11.2/fontawesome-free-5.11.2-web.zip');
 define('FONTAWESOME_PREFIX', 'fa');
 
 /**
@@ -87,7 +87,7 @@ function fontawesome_libraries_info() {
       'js/solid.js',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_svg_solid']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_svg_base',
   );
 
@@ -99,7 +99,7 @@ function fontawesome_libraries_info() {
       'js/regular.js',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_svg_regular']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_svg_base',
   );
 
@@ -111,7 +111,7 @@ function fontawesome_libraries_info() {
       'js/light.js',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_svg_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_svg_light']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_svg_base',
   );
 
@@ -162,7 +162,7 @@ function fontawesome_libraries_info() {
       'css/solid.css',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_solid']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_webfonts_base',
   );
 
@@ -174,7 +174,7 @@ function fontawesome_libraries_info() {
       'css/regular.css',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_regular']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_webfonts_base',
   );
 
@@ -186,7 +186,7 @@ function fontawesome_libraries_info() {
       'css/light.css',
     ),
   );
-  $libraries[FONTAWESOME_LIBRARY . '_webfonts_brands']['dependencies'] = array(
+  $libraries[FONTAWESOME_LIBRARY . '_webfonts_light']['dependencies'] = array(
     FONTAWESOME_LIBRARY . '_webfonts_base',
   );
 
@@ -209,7 +209,7 @@ function fontawesome_libraries_info() {
  * Callback to determine fontawesome version number.
  */
 function _fontawesome_version() {
-  return '5.8.2';
+  return '5.11.2';
 }
 
 /**
@@ -230,7 +230,8 @@ function fontawesome_preprocess_html_tag(&$vars) {
 
       // Check if we are using the CDN.
       if ($external_settings['use_cdn']) {
-        $path = $external_settings['external_location'];
+        // Determine the base for the CDN.
+        $path = _fontawesome_get_base_path($external_settings['external_location']);
       }
       else {
         $library = libraries_detect(FONTAWESOME_LIBRARY . '_' . $method);
@@ -245,6 +246,26 @@ function fontawesome_preprocess_html_tag(&$vars) {
     }
   }
   return;
+}
+
+/**
+ * Gets the base path for a CDN.
+ *
+ * @param string $path
+ *   The path to the CDN.
+ *
+ * @return string
+ *   The base path.
+ */
+function _fontawesome_get_base_path($path) {
+  // Determine the base for the CDN.
+  $cdn_components = parse_url($path);
+  $cdn_components['path'] = explode('/', $cdn_components['path']);
+  unset($cdn_components['path'][count($cdn_components['path']) - 1]);
+  $cdn_components['path'] = implode('/', $cdn_components['path']) . '/';
+  $cdn_components = _fontawesome_unparse_url($cdn_components);
+
+  return $cdn_components;
 }
 
 /**
@@ -327,11 +348,7 @@ function fontawesome_preprocess_html() {
     }
     else {
       // Determine the base for the CDN.
-      $cdn_components = parse_url($external_settings['external_location']);
-      $cdn_components['path'] = explode('/', $cdn_components['path']);
-      unset($cdn_components['path'][count($cdn_components['path']) - 1]);
-      $cdn_components['path'] = implode('/', $cdn_components['path']) . '/';
-      $cdn_components = _fontawesome_unparse_url($cdn_components);
+      $cdn_components = _fontawesome_get_base_path($external_settings['external_location']);
 
       // Webfonts.
       if ($method == 'webfonts') {

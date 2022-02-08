@@ -712,51 +712,43 @@ function range_field_widget_validate($element, &$form_state) {
  * FAPI validation of a FROM or TO range subelement.
  */
 function range_field_widget_validate_subelement($subelement, $element, &$form_state) {
+  $value = $element[$subelement]['#value'];
+  if ($value === '') {
+    return;
+  }
+
   $field = field_widget_field($element, $form_state);
-  $instance = field_widget_instance($element, $form_state);
-
   $type = $element['#range_type'];
+  $valid = TRUE;
+  if ($type === 'integer') {
+    $valid = filter_var($value, FILTER_VALIDATE_INT);
+    $message_args = array(
+      '%field' => $element[$subelement]['#title'],
+    );
+    $message = t('Only numbers are allowed in %field.', $message_args);
+  }
+  else {
+    $options = array(
+      'options' => array(
+        'decimal' => $field['settings']['decimal_separator'],
+      ),
+    );
+    $valid = filter_var($value, FILTER_VALIDATE_FLOAT, $options);
+    $message_args = array(
+      '%field' => $element[$subelement]['#title'],
+      '@separator' => $field['settings']['decimal_separator'],
+    );
+    $message = t('Only numbers and one decimal separator (@separator) allowed in %field.', $message_args);
+  }
 
-  $element = $element[$subelement];
-  $value = $element['#value'];
-  // Reject invalid characters.
-  if (!empty($value)) {
-    switch ($type) {
-      case 'float':
-      case 'decimal':
-        $message_args = array(
-          '%field' => $element['#title'],
-          '@separator' => $field['settings']['decimal_separator'],
-        );
-        $regexp = '@([^-0-9\\' . $field['settings']['decimal_separator'] . '])|(.-)@';
-        $message = t('Only numbers and the decimal separator (@separator) allowed in %field.', $message_args);
-        break;
-
-      case 'integer':
-        $message_args = array(
-          '%field' => $element['#title'],
-        );
-        $regexp = '@([^-0-9])|(.-)@';
-        $message = t('Only numbers are allowed in %field.', $message_args);
-        break;
+  if ($valid === FALSE) {
+    form_error($element[$subelement], $message);
+  }
+  else {
+    if ($type === 'decimal' || $type === 'float') {
+      $value = strtr($value, $field['settings']['decimal_separator'], '.');
     }
-    if ($value != preg_replace($regexp, '', $value)) {
-      form_error($element, $message);
-    }
-    else {
-      if ($type === 'decimal' || $type === 'float') {
-        // Verify that only one decimal separator exists in the field.
-        if (substr_count($value, $field['settings']['decimal_separator']) > 1) {
-          $message = t('%field: There should only be one decimal separator (@separator).', $message_args);
-          form_error($element, $message);
-        }
-        else {
-          // Substitute the decimal separator; things should be fine.
-          $value = strtr($value, $field['settings']['decimal_separator'], '.');
-        }
-      }
-      form_set_value($element, $value, $form_state);
-    }
+    form_set_value($element[$subelement], $value, $form_state);
   }
 }
 
