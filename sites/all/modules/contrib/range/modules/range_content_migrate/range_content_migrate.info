@@ -5,9 +5,8 @@ core = 7.x
 dependencies[] = content_migrate
 dependencies[] = range
 
-; Information added by Drupal.org packaging script on 2016-10-04
-version = "7.x-1.7"
+; Information added by Drupal.org packaging script on 2021-09-20
+version = "7.x-1.8"
 core = "7.x"
 project = "range"
-datestamp = "1475599141"
-
+datestamp = "1632145296"

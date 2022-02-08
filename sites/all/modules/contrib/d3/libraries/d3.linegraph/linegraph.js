@@ -5,6 +5,11 @@
 
 (function($) {
 
+  // Polyfills for previous versions
+  if(!d3.scaleLinear){d3.scaleLinear = d3.scale.linear;}
+  if(!d3.scaleOrdinal){d3.scaleOrdinal = d3.scale.ordinal;}
+  if(!d3.line){d3.line = d3.svg.line;}
+
   Drupal.d3.linegraph = function (select, settings) {
     var labels = [],
       key = settings.legend || [],
@@ -14,9 +19,9 @@
       h = (settings.height || 400),
       chart = settings.chart || {w: w * .60, h: h - p[0] - p[2] },
       legend = {w: w * .25, h:h},
-      x = d3.scale.linear().domain([0,rows.length - 1]).range([20,chart.w]),
-      y = d3.scale.linear().domain([0,maxValue(rows)]).range([chart.h, 0]),
-      z = d3.scale.ordinal().range(["blue", "red", "orange", "green"]);
+      x = d3.scaleLinear().domain([0,rows.length - 1]).range([20,chart.w]),
+      y = d3.scaleLinear().domain([0,maxValue(rows)]).range([chart.h, 0]),
+      z = d3.scaleOrdinal().range(["blue", "red", "orange", "green"]);
 
     var svg = d3.select('#' + settings.id).append("svg")
         .attr("width", w)
@@ -43,9 +48,9 @@
         .attr("class", "line")
         .style("stroke", function(d, i) { return d3.rgb(z(i)); })
         .style("stroke-width", 3)
-        .attr("d", d3.svg.line()
-        .x(function(d,i) { return x(i); })
-        .y(function(d) { return y(d.y); }));
+        .attr("d", d3.line()
+          .x(function(d,i) { return x(i); })
+          .y(function(d) { return y(d.y); }));
 
     // Creates a container for each group of circles.
     var circles = graph.selectAll("g.circles")
@@ -117,10 +122,18 @@
       .attr('class', 'tooltip')
       .attr('visibility', 'hidden'), "");
 
-    var voronoi = d3.geom.voronoi()
-      .clipExtent([[0, 0], [w, h * 0.75]])
-      .x(function (d) { return x(d.x); })
-      .y(function (d) { return y(d.y); });
+    var voronoi;
+    if(d3.version.replace(/\..*/,"") <= "3") {
+      voronoi = d3.geom.voronoi()
+        .clipExtent([[0, 0], [w, h * 0.75]])
+        .x(function (d) { return x(d.x); })
+        .y(function (d) { return y(d.y); });
+	} else {
+	  voronoi = d3.voronoi()
+        .extent([[0, 0], [w, h * 0.75]])
+        .x(function (d) { return x(d.x); })
+        .y(function (d) { return y(d.y); });
+	}
 
     var vertices = data.map(function (d, i) {
       return d.map(function (d, j) {
@@ -131,15 +144,27 @@
       });
     }).reduce(function (a, b) { return a.concat(b); });
 
+    var c, cp;
+    if(d3.version.replace(/\..*/,"") <= "3") {
+      c = voronoi(vertices).map(function (d, i) {
+        return {path: "M" + d.join("L") + "Z", vertex: vertices[i]};
+      }).filter(function(n) { return n != undefined });
+      cp = function (d, i) { return "url(#clip-" + d.vertex.i + "-" + d.vertex.j + ")"; };
+    } else {
+      c = voronoi(vertices).polygons(function (d, i) {
+        return {path: "M" + d.join("L") + "Z", vertex: vertices[i]};
+      }).filter(function(n) { return n != undefined });
+      cp = function (d, i) { return "url(#clip-" + d[0] + "-" +  + ")"; }
+    }
+
     graph.append('g')
         .attr('class', 'voronoi')
         .attr('opacity', 0)
-      .selectAll('g.voronoi').data(voronoi(vertices).map(function (d, i) {
-        return {path: "M" + d.join("L") + "Z", vertex: vertices[i]}; }).filter(function(n) { return n != undefined }))
+      .selectAll('g.voronoi').data(c)
         .enter().append('path')
           .attr('class', 'voronoi')
           .attr('d', function (d) { return d.path; })
-          .attr('clip-path', function (d, i) { return "url(#clip-" + d.vertex.i + "-" + d.vertex.j + ")"; })
+          .attr('clip-path', cp)
           .on('mouseover', function (d, i) {
             var circle = graph.select('.circle-group-' + d.vertex.i).select('.circle-' + d.vertex.j + '-mouse')[0][0];
             mouseover.bind(circle)(d.vertex);

@@ -1,0 +1,29 @@
+{
+    "name": "drupal/range",
+    "type": "drupal-module",
+    "description": "Defines a numeric range field type.",
+    "homepage": "https://drupal.org/project/range",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Roman Paska (Taran2L)",
+            "homepage": "https://www.drupal.org/u/taran2l",
+            "role": "Maintainer"
+        }
+    ],
+    "require-dev": {
+        "drupal/entity": "1.x-dev"
+    },
+    "repositories": {
+        "drupal": {
+            "type": "composer",
+            "url": "https://packages.drupal.org/7"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "support": {
+        "issues": "https://drupal.org/project/issues/range",
+        "source": "https://git.drupalcode.org/project/range"
+    }
+}

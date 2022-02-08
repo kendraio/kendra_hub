@@ -59,7 +59,8 @@ class d3_views_plugin_style_d3 extends views_plugin_style {
     $options = parent::option_definition();
 
     $options['library'] = array('default' => FALSE);
-		$options['fields'] = array('default' => array());
+    $options['fields'] = array('default' => array());
+    $options['settings'] = array('default' => array());
     $options['show_table'] = array('default' => FALSE);
 
     return $options;

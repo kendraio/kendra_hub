@@ -13,6 +13,10 @@
 
 (function($) {
 
+  // Polyfills for previous versions
+  if(!d3.scaleOrdinal){d3.scaleOrdinal = d3.scale.ordinal;}
+  if(!d3.arc){d3.arc = d3.svg.arc;}
+  if(!d3.pie){d3.pie = d3.layout.pie;}
   Drupal.d3.piechart = function (select, settings) {
     var wedges = settings.rows,
       // Each wedge has a label and a value
@@ -25,7 +29,7 @@
       radius = Math.min((w - p[1] - p[3]), (h - p[0] - p[2])) / 2,
       // Maximum width and height for the legend minus padding.
       legend = {w: (w - p[3] - p[1] - radius * 2), h: h - p[0] - p[2]},
-      color = d3.scale.ordinal().range(['blue', 'red', 'orange', 'green', 'purple', 'lightblue', 'palevioletred', 'orangered', 'mediumpurple', 'pink', 'yellow', 'olive', 'mediumorchid']),
+      color = d3.scaleOrdinal().range(['blue', 'red', 'orange', 'green', 'purple', 'lightblue', 'palevioletred', 'orangered', 'mediumpurple', 'pink', 'yellow', 'olive', 'mediumorchid']),
       div = (settings.id) ? settings.id : 'visualization';
 
     var svg = d3.select('#' + div).append("svg")
@@ -38,21 +42,21 @@
       .attr("class", "chart")
       .attr('transform', 'translate(' + radius + ',' + radius + ')');
 
-    var arc = d3.svg.arc()
+    var arc = d3.arc()
         .outerRadius(radius - 10)
         .innerRadius(0);
 
     // Background arc that will act as a rollover.
-    var arc_effect = d3.svg.arc()
+    var arc_effect = d3.arc()
         .outerRadius(radius)
         .innerRadius(radius - 10);
 
     // Main arc that will be visible at all time.
-    var circle = d3.svg.arc()
+    var circle = d3.arc()
         .outerRadius(radius - 10)
         .innerRadius(radius - 10);
 
-    var pie = d3.layout.pie()
+    var pie = d3.pie()
         .sort(null)
         .value(function(d) { return Number(d[1]); });
 
