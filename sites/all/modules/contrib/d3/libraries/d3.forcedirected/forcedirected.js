@@ -39,7 +39,8 @@
     force.gravity(.05);
     var svg = d3.select('#' + settings.id).append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .attr('class', 'd3-force-directed-container');
 
     // Add definitions
     var defs = svg.append("defs");
@@ -61,9 +62,7 @@
         .attr("orient", "auto")
         .append("path")
         .attr("d", function(d){return d.path;})
-        .attr('class', function(d){return 'marker marker-' + d.id})
-        .style('fill', '#000')
-    ;
+        .attr('class', function(d){return 'marker marker-' + d.id});
 
     var graph = svg.append("g")
         .attr("class", "data");
@@ -93,8 +92,7 @@
       .attr("class", "node")
       .attr("r", function(d) { return (d.data.d) ? d.data.d : 5; })
       .style("fill", d3.hsl('white'))
-      .style("stroke", function(d) { return d3.hsl(d.data.fill); })
-      .style("stroke-width", 3);
+      .style("stroke", function(d) { return d3.hsl(d.data.fill); });
 
     // filter on items that have and don't have an d.data.uri
     var hasUri = function(d) { return d.data && d.data.uri && d.data.uri.length > 0;};
@@ -108,7 +106,6 @@
         .attr("class", "nodetext")
         .attr("dx", 10)
         .attr("dy", ".35em")
-        .attr('font-size', '10')
         .text(function(d) { return d.name });
 
     node.filter(noUri)
@@ -116,7 +113,6 @@
         .attr("class", "nodetext")
         .attr("dx", 10)
         .attr("dy", ".35em")
-        .attr('font-size', '10')
         .text(function(d) { return d.name });
 
     force.on("tick", function() {
