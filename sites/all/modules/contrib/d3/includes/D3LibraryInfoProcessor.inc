@@ -58,7 +58,7 @@ class D3LibraryInfoProcessor {
    *   String separated by underscores.
    */
   public function getKey() {
-    return join($this->key, '_');
+    return join('_', $this->key);
   }
 
   /**

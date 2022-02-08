@@ -83,6 +83,60 @@ function d3_theme() {
 }
 
 /**
+ * Lists library versions by polling CDN
+ */
+function _d3_list_library_versions_from_cdn() {
+  $library_versions = array();
+  if (checkdnsrr( 'd3js.org' )) {
+    stream_context_set_default(array('https' => array('method' => 'HEAD')));
+    for ($library_version = 3; $library_version < 50; ++$library_version) {
+      $hdrs = get_headers("https://d3js.org/d3.v{$library_version}.min.js");
+      if ($hdrs) {
+        if (substr($hdrs[0], 9, 1) === '2') {
+          $library_versions[] = "$library_version";
+          continue;
+        }
+      }
+      if (count($library_versions) != 0) {
+        break;
+      }
+    }
+    stream_context_set_default(array('https' => array('method' => 'GET')));
+  }
+  return $library_versions;
+}
+
+/**
+ * Lists library versions nominally available in sites/all/libraries/d3/
+ */
+function _d3_list_library_versions_from_libraries() {
+  $library_versions = array();
+  $path = libraries_get_path('d3');
+  if ($path) {
+    $files = array();
+    // In the repository the files might be named d3.js and d3.min.js.
+    $files += file_scan_directory($path, '/d3.js|d3.min.js/');
+    // They could also have the version # in the file name.
+    $files += file_scan_directory($path, '/d3.v[0-9]+(.min)?.js/');
+    foreach ($files as $file) {
+      $library_version = '';
+      // Assume files named d3.js or d3.min.js are version 3
+      if ($file->filename == 'd3.js' || $file->filename == 'd3.min.js') {
+        $library_version = 3;
+      }
+      elseif (preg_match('/d3.v([0-9]+)(.min)?.js/', $file->filename, $matches)) {
+        $library_version = $matches[1];
+      }
+      if ($library_version && !in_array($library_version, $library_versions)) {
+        $library_versions[] = "$library_version";
+      }
+    }
+  }
+  sort($library_versions, SORT_NUMERIC);
+  return $library_versions;
+}
+
+/**
  * Implements hook_preprocess_d3() for d3.tpl.php.
  */
 function d3_preprocess_d3(&$variables) {
@@ -125,8 +179,8 @@ function d3_libraries_info_file_paths() {
 /**
  * Library post-detect callback to process info files before caching.
  *
- * @see libraries_detect().
- * @see libraries_load().
+ * @see libraries_detect()
+ * @see libraries_load()
  */
 function d3_detect_library_info(&$library, $version = NULL, $variant = NULL) {
   $handlers = d3_get_library_info_handlers_info();
@@ -147,7 +201,7 @@ function d3_detect_library_info(&$library, $version = NULL, $variant = NULL) {
  * @return $object
  *   Instance of D3LibraryInfoController
  *
- * @see hook_library_info_handlers().
+ * @see hook_library_info_handlers()
  */
 function d3_get_library_info_handler($key = 'default') {
   static $handlers;
@@ -232,23 +286,12 @@ function d3_libraries_info() {
   );
 
   $lib = variable_get('d3_library_source', 'lib');
+  $ver = variable_get('d3_library_version', 3);
   if ($lib == 'cdn') {
     $options = array(
       'lines' => 4,
-      'file' => 'https://d3js.org/d3.v3.min.js',
-      'pattern' => '/version\:\"([0-9\.]*)\"/',
+      'file' => "https://d3js.org/d3.v{$ver}.min.js",
     );
-
-    // Detect version from CDN.
-    $file = fopen($options['file'], 'r');
-    $version = '';
-    while ($line = fgets($file)) {
-      preg_match($options['pattern'], $line, $results);
-      if (!empty($results[1])) {
-        $version = $results[1];
-      }
-    }
-    fclose($file);
 
     $libraries['d3'] = array(
       'name' => 'D3',
@@ -261,10 +304,10 @@ function d3_libraries_info() {
       'library path' => 'https://d3js.org',
       'files' => array(
         'js' => array(
-          'data' => 'd3.v3.min.js',
+          'data' => "d3.v{$ver}.min.js",
         ),
       ),
-      'version' => $version,
+      'version' => $ver,
     );
 
     return $libraries;
@@ -286,27 +329,20 @@ function d3_libraries_info() {
       return $libraries;
     }
 
-    // This will be the default file.
-    // @TODO: Add this to d3 settings so you can choose.
-    $file = array_shift($files);
-    $version = 0;
-
-    // If this is a repository, there should be a package file. We can filter
-    // out the version number.
-    $package = file_exists($path . '/package.json') ? file_get_contents($path . '/package.json') : FALSE;
-    if ($package) {
-      preg_match('/\"version\"\:\ \"([0-9\.]*)\"/', $package, $version_matches);
-      if (isset($version_matches[1])) {
-        $version = $version_matches[1];
+    $file = NULL;
+    // Find the file that matches the specified version.
+    foreach ($files as $a_file) {
+      // Assume files named d3.js or d3.min.js are version 3
+      if (($ver === 3 && ($a_file->filename === "d3.js" ||
+                          $a_file->filename === "d3.min.js")) ||
+          $a_file->filename === "d3.v$ver.js" ||
+          $a_file->filename === "d3.v$ver.min.js" ) {
+        $file = $a_file;
       }
     }
-    // If this is from the zip file, we should be able to get the version
-    // from the actual file itself.
-    if (strpos($file->filename, '.v')) {
-      preg_match('/\.v([0-9])/', $file->filename, $version_matches);
-      if (isset($version_matches[1])) {
-        $version = $version_matches[1];
-      }
+
+    if (!$file) {
+      $file = array_shift($files);
     }
 
     $libraries['d3'] = array(
@@ -318,13 +354,7 @@ function d3_libraries_info() {
           $file->filename,
         ),
       ),
-      'version arguments' => array(
-        'file' => 'd3.min.js',
-        // Match ‘version:"3.4.4"’ or ‘Version 4.4.0. ’
-        'pattern' => '/(?|version\:\"([0-9\.]*)\"|Version ([0-9\.]*)\. )/',
-        'lines' => 3,
-        'cols' => 40000,
-      ),
+      'version' => $ver,
     );
   }
 

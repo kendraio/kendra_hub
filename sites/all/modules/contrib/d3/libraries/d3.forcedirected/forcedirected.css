@@ -1,0 +1,9 @@
+.d3-force-directed-container .marker {
+  fill: #000;
+}
+.d3-force-directed-container .node {
+  stroke-width: 3;
+}
+.d3-force-directed-container .nodetext {
+  font-size: 10px;
+}

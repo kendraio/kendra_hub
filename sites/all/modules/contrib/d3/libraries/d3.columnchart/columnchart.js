@@ -5,6 +5,10 @@
 
 (function($) {
 
+  // Polyfills for previous versions
+  if(!d3.scaleLinear){d3.scaleLinear = d3.scale.linear;}
+  if(!d3.scaleOrdinal){d3.scaleOrdinal = d3.scale.ordinal;}
+
   Drupal.d3.columnchart = function (select, settings) {
 
     var rows = settings.rows,
@@ -30,9 +34,9 @@
       barGroupWidth = (key.length * barWidth),
       // space in between each set
       barSpacing = (.10 * chart.w) / rows.length,
-      x = d3.scale.linear().domain([0,rows.length]).range([0,chart.w]),
-      y = d3.scale.linear().domain([0,max]).range([chart.h, 0]),
-      z = d3.scale.ordinal().range(["blue", "red", "orange", "green"]),
+      x = d3.scaleLinear().domain([0,rows.length]).range([0,chart.w]),
+      y = d3.scaleLinear().domain([0,max]).range([chart.h, 0]),
+      z = d3.scaleOrdinal().range(["blue", "red", "orange", "green"]),
       div = (settings.id) ? settings.id : 'visualization';
 
     var svg = d3.select('#' + div).append("svg")

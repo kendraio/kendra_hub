@@ -1191,7 +1191,9 @@ class views_handler_filter extends views_handler {
     if ($type == 'value' && empty($this->always_required) && empty($this->options['expose']['required']) && $form['#type'] == 'select' && empty($form['#multiple'])) {
       $any_label = variable_get('views_exposed_filter_any_label', 'new_any') == 'old_any' ? t('<Any>') : t('- Any -');
       $form['#options'] = array('All' => $any_label) + $form['#options'];
-      $form['#default_value'] = 'All';
+      if (empty($form['#default_value'])) {
+        $form['#default_value'] = 'All';
+      }
     }
 
     if (!empty($this->options['expose']['required'])) {
@@ -1382,12 +1384,19 @@ class views_handler_filter extends views_handler {
     }
 
     if (!empty($this->options['expose']['identifier'])) {
-      $value = $input[$this->options['expose']['identifier']];
+      if (isset($input[$this->options['expose']['identifier']])) {
+        $value = $input[$this->options['expose']['identifier']];
+      }
+      else {
+        return FALSE;
+      }
 
       // Various ways to check for the absence of non-required input.
       if (empty($this->options['expose']['required'])) {
         if ($this->operator == 'empty' || $this->operator == 'not empty') {
-          $value = is_array($value) ? $value['value'] : $value;
+          if (is_array($value) && array_key_exists('value', $value)) {
+            $value = $value['value'];
+          }
           $this->operator = ($this->operator == 'empty' && empty($value)) || ($this->operator == 'not empty' && !empty($value)) ? 'not empty' : 'empty';
         }
 
